@@ -214,6 +214,58 @@ class _ImageBaseHDU(_ValidHDU):
         self._modified = True
         self.update_header()
 
+    @property
+    def subset(self):
+        """Access a subset of the image."""
+
+        class ImageSubset():
+
+            def __init__(self, file, shape, dtype, offset):
+                self.file = file
+                self.shape = shape
+                self.dtype = np.dtype(dtype)
+                self.offset = offset
+
+            def __getitem__(self, key):
+                """Returns a subset of the image specified by `key`.
+
+                This function will use the open file handle to read only the chunks of the image
+                needed to extract `key`.
+
+                Caution: the order of the axes on Numpy arrays is opposite to a FITS file.
+                """
+                if isinstance(key, int) or isinstance(key, slice):
+                    # Subsetting is not possible; we'd have to download the entire image.
+                    return None
+                elif isinstance(key, tuple):
+                    # Ensure chunks is a slice
+                    chunkslice = key[0]
+                    if isinstance(chunkslice, int):
+                        chunkslice = slice(chunkslice, chunkslice+1)
+
+                    chunkidx = chunkslice.indices(self.shape[0])
+                    chunksize = self.dtype.itemsize * self.shape[1]
+
+                    chunkdata = []
+                    for idx in range(chunkidx[0], chunkidx[1], chunkidx[2]):
+                        self.file.seek(self.offset + idx*chunksize)
+                        chunkdata.append(self.file.read(chunksize))
+
+                    databuffer = b''.join(chunkdata)
+                    newshape = (len(chunkdata), self.shape[1])
+
+                    # raw_data.dtype = raw_data.dtype.newbyteorder('>')
+                    data = np.ndarray(newshape, dtype=self.dtype, buffer=databuffer)
+                    return data[:, key[1]]
+
+                else:
+                    raise TypeError('Index must be a int, slice, or tuple, not {}'.format(type(key).__name__))
+
+        dtype = np.dtype(BITPIX2DTYPE[self._orig_bitpix])
+        dtype = dtype.newbyteorder('>')
+        subset = ImageSubset(self._file, shape=self.shape, dtype=dtype, offset=self._data_offset)
+        return subset
+
     @lazyproperty
     def data(self):
         """
