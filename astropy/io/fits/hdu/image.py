@@ -218,7 +218,7 @@ class _ImageBaseHDU(_ValidHDU):
     def subset(self):
         """Access a subset of the image."""
 
-        class ImageSubset():
+        class ImageSubsetRetriever():
 
             def __init__(self, file, shape, dtype, offset):
                 self.file = file
@@ -243,28 +243,30 @@ class _ImageBaseHDU(_ValidHDU):
                     if isinstance(chunkslice, int):
                         chunkslice = slice(chunkslice, chunkslice+1)
 
-                    chunkidx = chunkslice.indices(self.shape[0])
                     chunksize = self.dtype.itemsize * self.shape[1]
+                    start, stop, step = chunkslice.indices(self.shape[0])
 
-                    chunkdata = []
-                    for idx in range(chunkidx[0], chunkidx[1], chunkidx[2]):
-                        self.file.seek(self.offset + idx*chunksize)
-                        chunkdata.append(self.file.read(chunksize))
+                    if step == 1:
+                        n_chunks = stop - start
+                        self.file.seek(self.offset + start*chunksize)
+                        databuffer = self.file.read(n_chunks*chunksize)
+                    else:
+                        chunkdata = []
+                        for idx in range(start, stop, step):
+                            self.file.seek(self.offset + idx*chunksize)
+                            chunkdata.append(self.file.read(chunksize))
+                        databuffer = b''.join(chunkdata)
+                        n_chunks = len(chunkdata)
 
-                    databuffer = b''.join(chunkdata)
-                    newshape = (len(chunkdata), self.shape[1])
-
-                    # raw_data.dtype = raw_data.dtype.newbyteorder('>')
+                    newshape = (n_chunks, self.shape[1])
                     data = np.ndarray(newshape, dtype=self.dtype, buffer=databuffer)
                     return data[:, key[1]]
 
                 else:
                     raise TypeError('Index must be a int, slice, or tuple, not {}'.format(type(key).__name__))
 
-        dtype = np.dtype(BITPIX2DTYPE[self._orig_bitpix])
-        dtype = dtype.newbyteorder('>')
-        subset = ImageSubset(self._file, shape=self.shape, dtype=dtype, offset=self._data_offset)
-        return subset
+        dtype = np.dtype(BITPIX2DTYPE[self._orig_bitpix]).newbyteorder('>')
+        return ImageSubsetRetriever(self._file, shape=self.shape, dtype=dtype, offset=self._data_offset)
 
     @lazyproperty
     def data(self):
