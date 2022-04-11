@@ -145,6 +145,12 @@ class _File:
         if mode is None:
             mode = 'readonly'
 
+        # Handle S3 URIs
+        if isinstance(fileobj, str) and fileobj.startswith("s3://"):
+            from s3fs import S3FileSystem
+            fs = S3FileSystem(anon=True)
+            fileobj = fs.open(fileobj, mode="rb", cache_type="block")
+
         # Handle raw URLs
         if (isinstance(fileobj, (str, bytes)) and
                 mode not in ('ostream', 'append', 'update') and _is_url(fileobj)):
