@@ -234,7 +234,11 @@ class _ImageBaseHDU(_ValidHDU):
 
                 Caution: the order of the axes on Numpy arrays is opposite to a FITS file.
                 """
-                if isinstance(key, int) or isinstance(key, slice):
+                # If a slice is passed, convert it to the N-dimensional tuple of slices
+                if isinstance(key, slice):
+                    key = (key, slice(None, None, None))
+
+                if isinstance(key, int):
                     # Subsetting is not possible; we'd have to download the entire image.
                     return None
                 elif isinstance(key, tuple):
@@ -266,7 +270,8 @@ class _ImageBaseHDU(_ValidHDU):
                     raise TypeError('Index must be a int, slice, or tuple, not {}'.format(type(key).__name__))
 
         dtype = np.dtype(BITPIX2DTYPE[self._orig_bitpix]).newbyteorder('>')
-        return ImageSubsetRetriever(self._file, shape=self.shape, dtype=dtype, offset=self._data_offset)
+        retriever = ImageSubsetRetriever(self._file, shape=self.shape, dtype=dtype, offset=self._data_offset)
+        return retriever
 
     @lazyproperty
     def data(self):
