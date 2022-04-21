@@ -234,40 +234,45 @@ class _ImageBaseHDU(_ValidHDU):
 
                 Caution: the order of the axes on Numpy arrays is opposite to a FITS file.
                 """
-                # If a slice is passed, convert it to the N-dimensional tuple of slices
-                if isinstance(key, slice):
-                    key = (key, slice(None, None, None))
-
-                if isinstance(key, int):
-                    # Subsetting is not possible; we'd have to download the entire image.
-                    return None
-                elif isinstance(key, tuple):
-                    # Ensure chunks is a slice
-                    chunkslice = key[0]
-                    if isinstance(chunkslice, int):
-                        chunkslice = slice(chunkslice, chunkslice+1)
-
-                    chunksize = self.dtype.itemsize * self.shape[1]
-                    start, stop, step = chunkslice.indices(self.shape[0])
-
-                    if step == 1:
-                        n_chunks = stop - start
-                        self.file.seek(self.offset + start*chunksize)
-                        databuffer = self.file.read(n_chunks*chunksize)
-                    else:
-                        chunkdata = []
-                        for idx in range(start, stop, step):
-                            self.file.seek(self.offset + idx*chunksize)
-                            chunkdata.append(self.file.read(chunksize))
-                        databuffer = b''.join(chunkdata)
-                        n_chunks = len(chunkdata)
-
-                    newshape = (n_chunks, self.shape[1])
-                    data = np.ndarray(newshape, dtype=self.dtype, buffer=databuffer)
-                    return data[:, key[1]]
-
+                if isinstance(key, tuple):
+                    keytuple = key
+                elif isinstance(key, slice):
+                    # Convert a single slice to a tuple
+                    keytuple = (key, slice(None, None, None))
+                elif isinstance(key, int):
+                    # Caution: subsetting is not possible; we'd have to download the entire image.
+                    keytuple = (slice(key, key+1), slice(None, None, None))
                 else:
                     raise TypeError('Index must be a int, slice, or tuple, not {}'.format(type(key).__name__))
+
+                # Ensure chunks is a slice
+                chunkslice = keytuple[0]
+                if isinstance(chunkslice, int):
+                    chunkslice = slice(chunkslice, chunkslice+1)
+
+                chunksize = self.dtype.itemsize * self.shape[1]
+                start, stop, step = chunkslice.indices(self.shape[0])
+
+                if step == 1:
+                    n_chunks = stop - start
+                    self.file.seek(self.offset + start*chunksize)
+                    databuffer = self.file.read(n_chunks*chunksize)
+                else:
+                    chunkdata = []
+                    for idx in range(start, stop, step):
+                        self.file.seek(self.offset + idx*chunksize)
+                        chunkdata.append(self.file.read(chunksize))
+                    databuffer = b''.join(chunkdata)
+                    n_chunks = len(chunkdata)
+
+                newshape = (n_chunks, self.shape[1])
+                data = np.ndarray(newshape, dtype=self.dtype, buffer=databuffer)
+
+                # If the original key was an int, we need to ensure we return an array
+                # of shape (N,) rather than (1, N) for numpy compatibility.
+                if isinstance(key, int):
+                    return data[0, keytuple[1]]
+                return data[:, keytuple[1]]
 
         dtype = np.dtype(BITPIX2DTYPE[self._orig_bitpix]).newbyteorder('>')
         retriever = ImageSubsetRetriever(self._file, shape=self.shape, dtype=dtype, offset=self._data_offset)
