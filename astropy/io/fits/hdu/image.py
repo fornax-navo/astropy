@@ -1,6 +1,7 @@
 # Licensed under a 3-clause BSD style license - see PYFITS.rst
 
 import sys
+import math
 import mmap
 import warnings
 
@@ -238,21 +239,29 @@ class _ImageBaseHDU(_ValidHDU):
                     keytuple = key
                 elif isinstance(key, slice):
                     # Convert a single slice to a tuple
-                    keytuple = (key, slice(None, None, None))
+                    keytuple = tuple([key] + [slice(None, None, None) for _ in range(len(self.shape)-1)])
                 elif isinstance(key, int):
                     # Caution: subsetting is not possible; we'd have to download the entire image.
-                    keytuple = (slice(key, key+1), slice(None, None, None))
+                    if key < 0:  # support negative indices
+                        key = self.shape[0] + key
+                    keytuple = tuple([slice(key, key+1)] + [slice(None, None, None) for _ in range(len(self.shape)-1)])
+                elif key is None:
+                    keytuple = tuple([slice(0, self.shape[0])] + [slice(None, None, None) for _ in range(len(self.shape)-1)])
                 else:
                     raise TypeError('Index must be a int, slice, or tuple, not {}'.format(type(key).__name__))
 
                 # Ensure chunks is a slice
                 chunkslice = keytuple[0]
                 if isinstance(chunkslice, int):
+                    if chunkslice < 0:  # support negative indices
+                        chunkslice = self.shape[0] + chunkslice
                     chunkslice = slice(chunkslice, chunkslice+1)
 
-                chunksize = self.dtype.itemsize * self.shape[1]
+                chunksize = self.dtype.itemsize * math.prod(self.shape[1:])
+
                 start, stop, step = chunkslice.indices(self.shape[0])
 
+                # If step=1, we can request all chunks in one read request
                 if step == 1:
                     n_chunks = stop - start
                     self.file.seek(self.offset + start*chunksize)
@@ -265,14 +274,18 @@ class _ImageBaseHDU(_ValidHDU):
                     databuffer = b''.join(chunkdata)
                     n_chunks = len(chunkdata)
 
-                newshape = (n_chunks, self.shape[1])
+                newshape = tuple([n_chunks] + list(self.shape[1:]))
                 data = np.ndarray(newshape, dtype=self.dtype, buffer=databuffer)
 
                 # If the original key was an int, we need to ensure we return an array
                 # of shape (N,) rather than (1, N) for numpy compatibility.
-                if isinstance(key, int):
-                    return data[0, keytuple[1]]
-                return data[:, keytuple[1]]
+                if isinstance(key, int) or isinstance(keytuple[0], int):
+                    customtuple = tuple([0] + [idx for idx in keytuple[1:]])
+                    return data[customtuple]
+                elif key is None:  # Indexing with None adds a dimension, so we replicate that behavior here.
+                    return data[key]
+                customtuple = tuple([slice(None, None, None)] + [idx for idx in keytuple[1:]])
+                return data[customtuple]
 
         dtype = np.dtype(BITPIX2DTYPE[self._orig_bitpix]).newbyteorder('>')
         retriever = ImageSubsetRetriever(self._file, shape=self.shape, dtype=dtype, offset=self._data_offset)
