@@ -1,3 +1,18 @@
+"""
+TODO
+====
+
+* Add test for compressed images; have it raise a
+  not implemented error?
+
+* Add indexing tests with specified dimensions, e.g.:
+    (0,1) or ((0,1), (2,3))
+  first number in each tuple is the dimension.
+
+* Add indexing tests with newaxis at the front, e.g.:
+    (None, None, 0),
+    (None, None, slice(None)),
+"""
 from astropy.io import fits
 from astropy.utils.data import get_pkg_data_filename
 
@@ -6,9 +21,10 @@ from numpy.testing import assert_array_equal
 import pytest
 
 INDEXING_PATTERNS = [
-    None,
     0,
     -1,
+    None,
+    ...,
     slice(None, None),
     (slice(None, None), slice(None, None)),
     slice(1, 3),
@@ -19,17 +35,22 @@ INDEXING_PATTERNS = [
     (slice(2, 3), -1),
     (slice(0, 5), slice(10, 15)),
     (slice(-10, None), slice(-20, None)),
-    (0, 1)
+    (0, 1),
+    (2, ...),
+    (..., 3),
+    (..., slice(1, 2)),
+    (0, None, None),
+    (slice(None), None, None),
 ]
 
 INDEXING_PATTERNS_3D = [
     (0, 1, 2),
-    (-1, -1, -1)
+    (-1, -1, -1),
+    (..., 1, 2),
+    (0, ..., 2),
+    (1, 2, ...),
+    (1, None, 3)
 ]
-
-# TODO: test indexing with tuples, e.g. (0,1) or ((0,1), (2,3))
-# first number in the index is the dimension
-# e.g. assert_array_equal(f[1].data[(0,1), (2,3)], f[1].subset[(0,1), (2,3)])
 
 
 def test_image_subset():
@@ -38,6 +59,7 @@ def test_image_subset():
     with fits.open(fn) as f:
         for idx in INDEXING_PATTERNS:
             assert_array_equal(f[1].data[idx], f[1].subset[idx])
+
 
 def test_cube_subset():
     # arange.fits[0] is a 3D array with shape (7, 10, 11)
