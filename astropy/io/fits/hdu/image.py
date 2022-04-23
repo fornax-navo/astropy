@@ -235,30 +235,38 @@ class _ImageBaseHDU(_ValidHDU):
 
                 Caution: the order of the axes on Numpy arrays is opposite to a FITS file.
                 """
+                # First we check `key` and ensure it is a tuple of length self.shape
                 if isinstance(key, tuple):
-                    keytuple = key
+                    # If the tuple starts with ellipsis, expand the length of the tuple to match the number of dimensions
+                    if key[0] is ...:
+                        keytuple = tuple([slice(None) for _ in range(len(self.shape)-len(key)+1)] + list(key[1:]))
+                    else:
+                        keytuple = key
                 elif isinstance(key, slice):
                     # Convert a single slice to a tuple
-                    keytuple = tuple([key] + [slice(None, None, None) for _ in range(len(self.shape)-1)])
+                    keytuple = tuple([key] + [slice(None) for _ in range(len(self.shape)-1)])
                 elif isinstance(key, int):
                     # Caution: subsetting is not possible; we'd have to download the entire image.
                     if key < 0:  # support negative indices
                         key = self.shape[0] + key
-                    keytuple = tuple([slice(key, key+1)] + [slice(None, None, None) for _ in range(len(self.shape)-1)])
-                elif key is None:
-                    keytuple = tuple([slice(0, self.shape[0])] + [slice(None, None, None) for _ in range(len(self.shape)-1)])
+                    keytuple = tuple([slice(key, key+1)] + [slice(None) for _ in range(len(self.shape)-1)])
+                elif key is None or key is ...:
+                    keytuple = tuple(slice(None) for _ in range(len(self.shape)))
                 else:
                     raise TypeError('Index must be a int, slice, or tuple, not {}'.format(type(key).__name__))
 
-                # Ensure chunks is a slice
+                # Next we determine which chunks need to be obtained
                 chunkslice = keytuple[0]
                 if isinstance(chunkslice, int):
                     if chunkslice < 0:  # support negative indices
                         chunkslice = self.shape[0] + chunkslice
                     chunkslice = slice(chunkslice, chunkslice+1)
+                elif chunkslice is ...:
+                    chunkslice = slice(None)
 
+                # Number of bytes in each chunk
                 chunksize = self.dtype.itemsize * math.prod(self.shape[1:])
-
+                # We will require chunks identified by #start, #stop, and #step
                 start, stop, step = chunkslice.indices(self.shape[0])
 
                 # If step=1, we can request all chunks in one read request
@@ -284,7 +292,7 @@ class _ImageBaseHDU(_ValidHDU):
                     return data[customtuple]
                 elif key is None:  # Indexing with None adds a dimension, so we replicate that behavior here.
                     return data[key]
-                customtuple = tuple([slice(None, None, None)] + [idx for idx in keytuple[1:]])
+                customtuple = tuple([slice(None)] + [idx for idx in keytuple[1:]])
                 return data[customtuple]
 
         dtype = np.dtype(BITPIX2DTYPE[self._orig_bitpix]).newbyteorder('>')
