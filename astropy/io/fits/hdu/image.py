@@ -217,7 +217,37 @@ class _ImageBaseHDU(_ValidHDU):
 
     @property
     def subset(self):
-        """Access a subset of the image."""
+        """Read a subset of the image into a `~numpy.ndarray`.
+
+        This property enables subsets of a FITS image to be obtained without
+        reading or downloading an entire file.  This is achieved by dynamically
+        translating data slicing operations into just-in-time file seek and read
+        operations.
+
+        This property does not offer data caching features.  It is assumed
+        that the underlying file-like object (``ImageHDU._file``) takes
+        care of caching, as is the case with `fsspec`-based file objects.
+
+        Compared to the standard `.data` property, the `.subset` property
+        is separate for the following reasons:
+        * Numpy eventually translates slicing operations into the required
+          file seek/read calls, but this happens deep in the Numpy C layer
+          (in the case of the buffer protocol) or even in the OS kernel
+          (if memory mapping is used).  There is no obvious way to use
+          the file-like objects provided by `fsspec` in these layers,
+          because `fsspec` and many of its dependencies (e.g. `boto3`)
+          are pure Python packages.
+        * This implementation does not currently support compressed data
+          or FITS files which are not backed by a file-like object.
+        * We may want to raise warnings in the case of inefficient data
+          access patterns.
+        * We may want to raise warnings if fsspec is used with an inappropriate
+         `cache_type` configuration.
+
+        Examples
+        --------
+        TBC
+        """
 
         class ImageSubsetRetriever():
 
