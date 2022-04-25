@@ -15,7 +15,9 @@ TODO
 * Test with AstroPy's ImageCutout tool?
 """
 from astropy.io import fits
+from astropy.utils.compat.optional_deps import HAS_S3FS  # noqa
 from astropy.utils.data import get_pkg_data_filename
+
 
 import numpy as np
 from numpy.testing import assert_array_equal, assert_allclose
@@ -89,6 +91,7 @@ def test_subset_compressed_image():
 
 
 @pytest.mark.remote_data
+@pytest.mark.skipif("not HAS_S3FS")
 def test_subset_from_s3():
     """Test `.subset` with an S3-hosted FITS file."""
     uri = f"s3://stpubdata/hst/public/j8pu/j8pu0y010/j8pu0y010_drc.fits"

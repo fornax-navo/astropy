@@ -105,7 +105,7 @@ class _File:
     """
 
     def __init__(self, fileobj=None, mode=None, memmap=None, overwrite=False,
-                 cache=True):
+                 cache=True, fsspec_kwargs=None):
         self.strict_memmap = bool(memmap)
         memmap = True if memmap is None else memmap
 
@@ -146,10 +146,16 @@ class _File:
             mode = 'readonly'
 
         # Handle S3 URIs with fsspec
-        if isinstance(fileobj, str) and fileobj.startswith("s3://"):
-            from s3fs import S3FileSystem
-            fs = S3FileSystem(anon=True)
-            fileobj = fs.open(fileobj, mode="rb", cache_type="block")
+        if isinstance(fileobj, str) and fileobj.startswith(("s3://", "gcs://", "abfs://", "adl://")):
+            if fsspec_kwargs is None:
+                fsspec_kwargs = {}
+            if "anon" not in fsspec_kwargs:
+                fsspec_kwargs["anon"] = True
+            if "default_cache_type" not in fsspec_kwargs:
+                fsspec_kwargs["default_cache_type"] = "block"
+            import fsspec
+            fileopen = fsspec.open(fileobj, **fsspec_kwargs)
+            fileobj = fileopen.open()
 
         # Handle raw URLs
         if (isinstance(fileobj, (str, bytes)) and
