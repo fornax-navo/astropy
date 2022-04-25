@@ -74,8 +74,8 @@ def test_subset_compressed_image():
     """The `.subset` feature should not work with compressed images.
 
     It is important to verify that an exception is raised when attempting
-    to `.subset` from a compressed image, to avoid incorrect data from
-    being returned.
+    to `.subset` from a compressed image, to prevent incorrect (i.e., compressed)
+    data being returned.
     """
     # comp.fits[1] is a compressed image with shape (440, 300)
     fn = get_pkg_data_filename('data/comp.fits')
