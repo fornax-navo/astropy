@@ -145,7 +145,7 @@ class _File:
         if mode is None:
             mode = 'readonly'
 
-        # Handle S3 URIs
+        # Handle S3 URIs with fsspec
         if isinstance(fileobj, str) and fileobj.startswith("s3://"):
             from s3fs import S3FileSystem
             fs = S3FileSystem(anon=True)

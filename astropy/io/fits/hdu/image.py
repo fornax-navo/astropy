@@ -221,12 +221,19 @@ class _ImageBaseHDU(_ValidHDU):
 
         This property enables subsets of a FITS image to be obtained without
         reading or downloading an entire file.  This is achieved by dynamically
-        translating data slicing operations into just-in-time file seek and read
-        operations.
+        translating data slicing operations into a set of file seek and read
+        operations which only access the necessary parts of the file.
+
+        This feature is intended to be used with file-like objects which are
+        backed by a (slow) remote data source. Specifically, this feature was
+        developed to enable subsets of FITS images hosted in AWS S3 cloud storage
+        to be accessed in an efficient way via the `fsspec` Python library.
+        The `.subset` attribute should work with any uncompressed FITS image
+        which can be accessed via a file-like Python object however.
 
         This property does not offer data caching features.  It is assumed
         that the underlying file-like object (``ImageHDU._file``) takes
-        care of caching, as is the case with `fsspec`-based file objects.
+        care of caching.  This is the case with `fsspec`-based file objects.
 
         Compared to the standard `.data` property, the `.subset` property
         is separate for the following reasons:
