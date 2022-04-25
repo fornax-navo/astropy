@@ -2,8 +2,7 @@
 TODO
 ====
 
-* Add test for compressed images; have it raise a
-  not implemented error?
+* Add test for treatment of optional fsspec dependency.
 
 * Add indexing tests with specified dimensions, e.g.:
     (0,1) or ((0,1), (2,3))
@@ -53,7 +52,8 @@ INDEXING_PATTERNS_3D = [
 ]
 
 
-def test_image_subset():
+def test_subset_from_image():
+    """Verifies the correctness of indexing an image via `.subset`."""
     # test0.fits[1] is a 2D image with shape (40, 40)
     fn = get_pkg_data_filename('data/test0.fits')
     with fits.open(fn) as f:
@@ -61,9 +61,25 @@ def test_image_subset():
             assert_array_equal(f[1].data[idx], f[1].subset[idx])
 
 
-def test_cube_subset():
+def test_subset_from_cube():
+    """Verifies the correctness of indexing an cube via `.subset`."""
     # arange.fits[0] is a 3D array with shape (7, 10, 11)
     fn = get_pkg_data_filename('data/arange.fits')
     with fits.open(fn) as f:
         for idx in INDEXING_PATTERNS + INDEXING_PATTERNS_3D:
             assert_array_equal(f[0].data[idx], f[0].subset[idx])
+
+
+def test_subset_compressed_image():
+    """The `.subset` feature should not work with compressed images.
+
+    It is important to verify that an exception is raised when attempting
+    to `.subset` from a compressed image, to avoid incorrect data from
+    being returned.
+    """
+    # comp.fits[1] is a compressed image with shape (440, 300)
+    fn = get_pkg_data_filename('data/comp.fits')
+    with fits.open(fn) as f:
+        with pytest.raises(AttributeError) as excinfo:
+            f[1].subset[1,2]
+        assert "'CompImageHDU' object has no attribute 'subset'" in str(excinfo.value)
