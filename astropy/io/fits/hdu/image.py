@@ -228,8 +228,8 @@ class _ImageBaseHDU(_ValidHDU):
         backed by a (slow) remote data source. Specifically, this feature was
         developed to enable subsets of FITS images hosted in AWS S3 cloud storage
         to be accessed in an efficient way via the `fsspec` Python library.
-        The `.subset` attribute should work with any uncompressed FITS image
-        which can be accessed via a file-like Python object however.
+        It will work with any uncompressed FITS image which can be accessed
+        via a file-like Python object however.
 
         This property does not offer data caching features.  It is assumed
         that the underlying file-like object (``ImageHDU._file``) takes
