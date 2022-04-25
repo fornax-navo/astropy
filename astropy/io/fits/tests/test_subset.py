@@ -11,11 +11,14 @@ TODO
 * Add indexing tests with newaxis at the front, e.g.:
     (None, None, 0),
     (None, None, slice(None)),
+
+* Test with AstroPy's ImageCutout tool?
 """
 from astropy.io import fits
 from astropy.utils.data import get_pkg_data_filename
 
-from numpy.testing import assert_array_equal
+import numpy as np
+from numpy.testing import assert_array_equal, assert_allclose
 import pytest
 
 
@@ -83,3 +86,16 @@ def test_subset_compressed_image():
         with pytest.raises(AttributeError) as excinfo:
             f[1].subset[1,2]
         assert "'CompImageHDU' object has no attribute 'subset'" in str(excinfo.value)
+
+
+@pytest.mark.remote_data
+def test_subset_from_s3():
+    """Test `.subset` with an S3-hosted FITS file."""
+    uri = f"s3://stpubdata/hst/public/j8pu/j8pu0y010/j8pu0y010_drc.fits"
+    # Expected array was obtained by downloading the file locally and executing:
+    # with fits.open(local_path) as hdulist:
+    #     hdulist[1].data[1000:1002, 2000:2003]
+    expected = np.array([[ 0.00545289,  0.0051066,  -0.00034149],
+                         [ 0.00120684,  0.00782754,  0.00546404]])
+    with fits.open(uri) as f:
+        assert_allclose(f[1].subset[1000:1002, 2000:2003], expected, atol=1e-7)
