@@ -12,7 +12,7 @@ TODO
     (None, None, 0),
     (None, None, slice(None)),
 
-* Test with AstroPy's ImageCutout tool?
+* Test with AstroPy's Cutout2D tool?
 """
 from astropy.io import fits
 from astropy.utils.compat.optional_deps import HAS_S3FS  # noqa
