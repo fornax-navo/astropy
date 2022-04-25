@@ -146,14 +146,19 @@ class _File:
             mode = 'readonly'
 
         # Handle S3 URIs with fsspec
-        if isinstance(fileobj, str) and fileobj.startswith(("s3://", "gcs://", "abfs://", "adl://")):
+        if isinstance(fileobj, str) and fileobj.startswith(("s3://", "gcs://", "abfs://", "adl://", "github://")):
             if fsspec_kwargs is None:
                 fsspec_kwargs = {}
             if "anon" not in fsspec_kwargs:
                 fsspec_kwargs["anon"] = True
             if "default_cache_type" not in fsspec_kwargs:
                 fsspec_kwargs["default_cache_type"] = "block"
-            import fsspec
+
+            try:
+                import fsspec
+            except ModuleNotFoundError:
+                raise ModuleNotFoundError("you need to install the `fsspec` Python package to open this uri")
+
             fileopen = fsspec.open(fileobj, **fsspec_kwargs)
             fileobj = fileopen.open()
 
