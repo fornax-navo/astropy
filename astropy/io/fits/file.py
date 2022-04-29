@@ -30,6 +30,8 @@ from astropy.utils.compat.optional_deps import HAS_BZ2
 if HAS_BZ2:
     import bz2
 
+from astropy.utils.compat.optional_deps import HAS_FSSPEC
+
 
 # Maps astropy.io.fits-specific file mode names to the appropriate file
 # modes to use for the underlying raw files.
@@ -105,7 +107,7 @@ class _File:
     """
 
     def __init__(self, fileobj=None, mode=None, memmap=None, overwrite=False,
-                 cache=True, fsspec_kwargs=None):
+                 cache=True, use_fsspec=None, fsspec_kwargs=None):
         self.strict_memmap = bool(memmap)
         memmap = True if memmap is None else memmap
 
@@ -145,19 +147,20 @@ class _File:
         if mode is None:
             mode = 'readonly'
 
-        # Handle S3 URIs with fsspec
-        if isinstance(fileobj, str) and fileobj.startswith(("s3://", "gcs://", "abfs://", "adl://", "github://")):
+        # Handle cloud URIs with fsspec
+        if use_fsspec:
+            if not HAS_FSSPEC:
+                raise ModuleNotFoundError("you need to install the `fsspec` Python package to open this file")
+            import fsspec
+
             if fsspec_kwargs is None:
                 fsspec_kwargs = {}
             if "anon" not in fsspec_kwargs:
                 fsspec_kwargs["anon"] = True
+            # The "block" cache type is preferred for small random access reads,
+            # which are common for FITS cutouts.
             if "default_cache_type" not in fsspec_kwargs:
                 fsspec_kwargs["default_cache_type"] = "block"
-
-            try:
-                import fsspec
-            except ModuleNotFoundError:
-                raise ModuleNotFoundError("you need to install the `fsspec` Python package to open this uri")
 
             fileopen = fsspec.open(fileobj, **fsspec_kwargs)
             fileobj = fileopen.open()
