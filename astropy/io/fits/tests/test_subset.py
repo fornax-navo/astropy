@@ -3,16 +3,15 @@ TODO
 ====
 
 * Add test for treatment of optional fsspec dependency.
-
 * Add indexing tests with specified dimensions, e.g.:
     (0,1) or ((0,1), (2,3))
   first number in each tuple is the dimension.
-
 * Add indexing tests with newaxis at the front, e.g.:
     (None, None, 0),
     (None, None, slice(None)),
-
 * Test with AstroPy's Cutout2D tool?
+* Review all the indexing patterns listed at https://numpy.org/devdocs/user/basics.indexing.html
+* Review NumPy array subclassing, e.g. https://github.com/seung-lab/cloud-volume
 """
 from astropy.io import fits
 from astropy.utils.compat.optional_deps import HAS_S3FS  # noqa
