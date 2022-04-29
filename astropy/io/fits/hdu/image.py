@@ -253,7 +253,19 @@ class _ImageBaseHDU(_ValidHDU):
 
         Examples
         --------
-        TBC
+        To extract a subset of a cloud-hosted FITS image:
+
+            >>> from astropy.io import fits
+            >>> uri = "s3://stpubdata/hst/public/j8pu/j8pu0y010/j8pu0y010_drc.fits"
+            >>> f = fits.open(uri)
+            >>> f[1].subset[10:12, 40:42]
+            array([[-0.02022914,  0.01017784],
+                   [-0.00605198,  0.01016048]], dtype=float32)
+
+        To configure the size of the blocks that are downloaded and cached by fsspec, you can
+        use the ``fsspec_kwargs`` parameter to pass on the relevant options:
+
+            >>> f = fits.open(uri, fsspec_kwargs={'default_cache_type': "block", 'default_block_size': 5_000_000})
         """
 
         class ImageSubsetRetriever():
