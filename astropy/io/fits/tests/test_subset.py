@@ -2,19 +2,22 @@
 TODO
 ====
 
+* Test with AstroPy's Cutout2D tool?
 * Add test for treatment of optional fsspec dependency.
+* Review subset docstring
+* Review NumPy array subclassing, e.g. https://github.com/seung-lab/cloud-volume
+
 * Add indexing tests with specified dimensions, e.g.:
     (0,1) or ((0,1), (2,3))
   first number in each tuple is the dimension.
 * Add indexing tests with newaxis at the front, e.g.:
     (None, None, 0),
     (None, None, slice(None)),
-* Test with AstroPy's Cutout2D tool?
 * Review all the indexing patterns listed at https://numpy.org/devdocs/user/basics.indexing.html
-* Review NumPy array subclassing, e.g. https://github.com/seung-lab/cloud-volume
+
 """
 from astropy.io import fits
-from astropy.utils.compat.optional_deps import HAS_S3FS  # noqa
+from astropy.utils.compat.optional_deps import HAS_FSSPEC, HAS_S3FS  # noqa
 from astropy.utils.data import get_pkg_data_filename
 
 
@@ -106,3 +109,16 @@ def test_subset_from_s3():
         # the repr and string representation should reflect this.
         assert "partially read" in repr(f)
         assert "partially read" in str(f)
+
+
+@pytest.mark.skipif("not HAS_FSSPEC")
+def test_fsspec_local_file():
+    """Can we use fsspec to open a local file?"""
+    fn = get_pkg_data_filename('data/test0.fits')
+    hdulist_classic = fits.open(fn, use_fsspec=False)
+    hdulist_fsspec = fits.open(fn, use_fsspec=True)
+    assert_array_equal(hdulist_classic[2].data, hdulist_fsspec[2].data)
+    assert "partially read" not in repr(hdulist_classic)
+    assert "partially read" in repr(hdulist_fsspec)
+    hdulist_classic.close()
+    hdulist_fsspec.close()
