@@ -6,6 +6,7 @@ TODO
 * Add test for treatment of optional fsspec dependency.
 * Review subset docstring
 * Review NumPy array subclassing, e.g. https://github.com/seung-lab/cloud-volume
+* Verify it works with http:// urls.
 
 * Add indexing tests with specified dimensions, e.g.:
     (0,1) or ((0,1), (2,3))

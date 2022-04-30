@@ -109,9 +109,9 @@ def fitsopen(name, mode='readonly', memmap=None, save_backup=False,
         Is the fsspec library to be used to open the file?
         Defaults to `False` unless ``name`` starts with prefix "s3://"
         (Amazon S3 storage) or prefix "gcs://" (Google Cloud Storage).
-        This feature requires the optional ``fsspec`` package to be installed,
-        as well as its dependencies ``s3fs`` (for Amazon S3 access) or ``gcsfs``
-        (for Google Cloud access).
+        This feature requires the optional ``fsspec`` package to be installed.
+        In addition, Amazon S3 files also require the ``s3fs`` optional
+        dependency, and Google Cloud files require ``gcsfs``.
 
         .. versionadded:: 5.1
 
@@ -189,6 +189,10 @@ def fitsopen(name, mode='readonly', memmap=None, save_backup=False,
             use_fsspec = False
     else:
         use_fsspec = bool(use_fsspec)
+
+    # fsspec should only be used for opening URI strings (e.g., "s3://")
+    if use_fsspec and not isinstance(name, str):
+        raise TypeError("`name` must be a string when `use_fsspec=True`")
 
     if 'uint' not in kwargs:
         kwargs['uint'] = conf.enable_uint
