@@ -2,7 +2,6 @@
 TODO
 ====
 
-* Test with AstroPy's Cutout2D tool?
 * Add test for treatment of optional fsspec dependency.
 * Review subset docstring
 * Review NumPy array subclassing, e.g. https://github.com/seung-lab/cloud-volume
@@ -18,9 +17,9 @@ TODO
 
 """
 from astropy.io import fits
+from astropy.nddata import Cutout2D
 from astropy.utils.compat.optional_deps import HAS_FSSPEC, HAS_S3FS  # noqa
 from astropy.utils.data import get_pkg_data_filename
-
 
 import numpy as np
 from numpy.testing import assert_array_equal, assert_allclose
@@ -123,3 +122,14 @@ def test_fsspec_local_file():
     assert "partially read" in repr(hdulist_fsspec)
     hdulist_classic.close()
     hdulist_fsspec.close()
+
+
+def test_cutout2d():
+    """Does Cutout2D work with lazy-loaded data?"""
+    fn = get_pkg_data_filename('data/test0.fits')
+    with fits.open(fn) as f:
+        position = (10, 20)
+        size = (2, 3)
+        cutout1 = Cutout2D(f[1].data, position, size)
+        cutout2 = Cutout2D(f[1].subset, position, size)
+        assert_allclose(cutout1.data, cutout2.data)
