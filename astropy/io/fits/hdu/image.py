@@ -219,37 +219,46 @@ class _ImageBaseHDU(_ValidHDU):
     def subset(self):
         """Read a subset of the image into a `~numpy.ndarray`.
 
-        This property enables subsets of a FITS image to be obtained without
-        reading or downloading an entire file.  This is achieved by dynamically
+        This property enables a subset of the FITS image to be obtained without
+        reading or downloading the entire file.  This is achieved by dynamically
         translating data slicing operations into a set of file seek and read
-        operations which only access the necessary parts of the file.
+        operations which only access the necessary "chunks" of the file.
 
-        This feature is intended to be used with file-like objects which are
-        backed by a (slow) remote data source. Specifically, this feature was
-        developed to enable subsets of FITS images hosted in AWS S3 cloud storage
-        to be accessed in an efficient way via the `fsspec` Python library.
-        It will work with any uncompressed FITS image which can be accessed
-        via a file-like Python object however.
+        The number of "chunks" in a file is defined as the length of the first
+        dimension.  For example, an image of shape (100, 200) is defined to be
+        composed of 100 chunks.  As a result, slicing operations which limit
+        the data required along the first dimension will be more efficient.
+        For example, `.subset[10:12, :]` would trigger two chunks to be
+        downloaded, whereas `.subset[:, 10:12]` requires all chunks to
+        be downloaded.
+
+        This feature is intended to be used with files which are backed by a
+        (slow) remote data source. Specifically, this feature is intended
+        to enable subsets of FITS images hosted in AWS S3 cloud storage
+        to be accessed in an efficient way via the ``fsspec`` library.
 
         This property does not offer data caching features.  It is assumed
-        that the underlying file-like object (``ImageHDU._file``) takes
-        care of caching.  This is the case with `fsspec`-based file objects.
+        that the underlying file object (``ImageHDU._file``) takes care of
+        caching redundant file reads.  This is usually the case when the
+        ``fsspec`` library is used to open the file objects.
 
-        Compared to the standard `.data` property, the `.subset` property
-        is separate for the following reasons:
-        * Numpy eventually translates slicing operations into the required
-          file seek/read calls, but this happens deep in the Numpy C layer
-          (in the case of the buffer protocol) or even in the OS kernel
-          (if memory mapping is used).  There is no obvious way to use
-          the file-like objects provided by `fsspec` in these layers,
-          because `fsspec` and many of its dependencies (e.g. `boto3`)
+        You may wonder why the `.subset` property does not override the
+        existing `.data` property. This is the case for the following reasons:
+        * The `.data` property is implemented using Numpy, which translates
+          slicing operations into the required file read calls deep in the
+          Numpy C layer (in the case of the buffer protocol) or even in the
+          OS kernel (if memory mapping is used).  There is no obvious way to
+          call the file-like objects provided by ``fsspec`` in these layers,
+          because ``fsspec`` and its cloud access dependencies (e.g. ``boto3``)
           are pure Python packages.
-        * This implementation does not currently support compressed data
-          or FITS files which are not backed by a file-like object.
+        * This implementation does not support compressed data.
+          Fortunately, NASA's PDS standard recommends against using compression
+          in archived data products, and indeed many NASA data products do not
+          use compression.
         * We may want to raise warnings in the case of inefficient data
           access patterns.
-        * We may want to raise warnings if fsspec is used with an inappropriate
-         `cache_type` configuration.
+        * We may want to raise warnings if ``fsspec`` is used with an
+          inappropriate `cache_type` configuration.
 
         Examples
         --------
