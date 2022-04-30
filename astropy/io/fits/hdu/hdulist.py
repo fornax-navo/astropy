@@ -116,7 +116,8 @@ def fitsopen(name, mode='readonly', memmap=None, save_backup=False,
         .. versionadded:: 5.1
 
     fsspec_kwargs : dict, optional
-        Keyword arguments passed on to fsspec.
+        Keyword arguments passed on to ``fsspec.open``.
+        Defaults to {"anon": True, "default_cache_type": "block"}.
 
         .. versionadded:: 5.1
 
@@ -277,6 +278,11 @@ class HDUList(list, _Verify):
         return super().__len__()
 
     def __repr__(self):
+        # If we are using `fsspec` and the file has not been fully downloaded
+        # yet, we return a simplified repr to avoid triggering a full download
+        if not self._read_all and self._file and self._file.use_fsspec:
+            return f"{type(self)} (partially read)"
+
         # In order to correctly repr an HDUList we need to load all the
         # HDUs as well
         self.readall()

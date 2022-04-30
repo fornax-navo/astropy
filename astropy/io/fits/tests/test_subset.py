@@ -100,4 +100,9 @@ def test_subset_from_s3():
     expected = np.array([[ 0.00545289,  0.0051066,  -0.00034149],
                          [ 0.00120684,  0.00782754,  0.00546404]])
     with fits.open(uri) as f:
+        # Do we retrieve the expected array?
         assert_allclose(f[1].subset[1000:1002, 2000:2003], expected, atol=1e-7)
+        # The file has multiple extensions which are not yet downloaded;
+        # the repr and string representation should reflect this.
+        assert "partially read" in repr(f)
+        assert "partially read" in str(f)
