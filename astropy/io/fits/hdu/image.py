@@ -277,21 +277,31 @@ class _ImageBaseHDU(_ValidHDU):
             >>> f = fits.open(uri, fsspec_kwargs={'default_cache_type': "block", 'default_block_size': 5_000_000})
         """
 
-        class ImageSubsetRetriever():
+        class LazyLoadArray(np.ndarray):
 
-            def __init__(self, file, shape, dtype, offset):
+            def __new__(cls, file, shape, dtype, offset, *args, **kwargs):
+                # This array object is backed by a zero-length buffer,
+                # because we have not been able to figure out how to create a
+                # buffer (i.e. a memoryview) that is backed by an fsspec file object.
+                # As a result, many array methods will fail.
+                return super(LazyLoadArray, cls).__new__(cls, shape=(0), buffer=bytearray(), dtype=dtype)
+
+            def __init__(self, file, shape, dtype, offset, *args, **kwargs):
+                super(LazyLoadArray, self).__init__()
                 self.file = file
-                self.shape = shape
+                self._shape = shape
                 self.dtype = np.dtype(dtype)
                 self.offset = offset
 
+            @property
+            def shape(self):
+                return self._shape
+
             def __getitem__(self, key):
-                """Returns a subset of the image specified by `key`.
+                """Returns a subset of the array specified by `key`.
 
                 This function will use the open file handle to read only the chunks of the image
                 needed to extract `key`.
-
-                Caution: the order of the axes on Numpy arrays is opposite to a FITS file.
                 """
                 # First we check `key` and ensure it is a tuple of length self.shape
                 if isinstance(key, tuple):
@@ -354,7 +364,7 @@ class _ImageBaseHDU(_ValidHDU):
                 return data[customtuple]
 
         dtype = np.dtype(BITPIX2DTYPE[self._orig_bitpix]).newbyteorder('>')
-        retriever = ImageSubsetRetriever(self._file, shape=self.shape, dtype=dtype, offset=self._data_offset)
+        retriever = LazyLoadArray(self._file, shape=self.shape, dtype=dtype, offset=self._data_offset)
         return retriever
 
     @lazyproperty
