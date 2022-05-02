@@ -5,7 +5,6 @@ TODO
 * Add Cutout2D test with wcs
 * Add test verifying i/o behavior
 * Add options to fits.conf?
-* Replace `type` with `isinstance` check in Cutout2D
 * Add test for treatment of optional fsspec dependency.
 * Review subset docstring
 * Review NumPy array subclassing, e.g. https://github.com/seung-lab/cloud-volume

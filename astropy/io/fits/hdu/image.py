@@ -274,89 +274,8 @@ class _ImageBaseHDU(_ValidHDU):
 
             >>> f = fits.open(uri, fsspec_kwargs={'default_cache_type': "block", 'default_block_size': 5_000_000})
         """
-
-        class LazyLoadArray():
-
-            def __init__(self, imagehdu, shape, dtype, offset, *args, **kwargs):
-                self.imagehdu = imagehdu
-                self.file = imagehdu._file
-                self.shape = shape
-                self.dtype = np.dtype(dtype)
-                self.offset = offset
-
-            def __array__(self):
-                # Caution: this will download the entire file!
-                return self.imagehdu.data
-
-            def __getitem__(self, key):
-                """Returns a subset of the array specified by `key`.
-
-                This function will use the open file handle to read only the chunks of the image
-                needed to extract `key`.
-                """
-                # First we check `key` and ensure it is a tuple of length self.shape
-                if isinstance(key, tuple):
-                    # If the tuple starts with ellipsis, expand the length of the tuple to match the number of dimensions
-                    if key[0] is ...:
-                        keytuple = tuple([slice(None) for _ in range(len(self.shape)-len(key)+1)] + list(key[1:]))
-                    else:
-                        keytuple = key
-                elif isinstance(key, slice):
-                    # Convert a single slice to a tuple
-                    keytuple = tuple([key] + [slice(None) for _ in range(len(self.shape)-1)])
-                elif isinstance(key, int):
-                    # Caution: subsetting is not possible; we'd have to download the entire image.
-                    if key < 0:  # support negative indices
-                        key = self.shape[0] + key
-                    keytuple = tuple([slice(key, key+1)] + [slice(None) for _ in range(len(self.shape)-1)])
-                elif key is None or key is ...:
-                    keytuple = tuple(slice(None) for _ in range(len(self.shape)))
-                else:
-                    raise TypeError('Index must be a int, slice, or tuple, not {}'.format(type(key).__name__))
-
-                # Next we determine which chunks need to be obtained
-                chunkslice = keytuple[0]
-                if isinstance(chunkslice, int):
-                    if chunkslice < 0:  # support negative indices
-                        chunkslice = self.shape[0] + chunkslice
-                    chunkslice = slice(chunkslice, chunkslice+1)
-                elif chunkslice is ...:
-                    chunkslice = slice(None)
-
-                # Number of bytes in each chunk
-                chunksize = self.dtype.itemsize * math.prod(self.shape[1:])
-                # We will require chunks identified by #start, #stop, and #step
-                start, stop, step = chunkslice.indices(self.shape[0])
-
-                # If step=1, we can request all chunks in one read request
-                if step == 1:
-                    n_chunks = stop - start
-                    self.file.seek(self.offset + start*chunksize)
-                    databuffer = self.file.read(n_chunks*chunksize)
-                else:
-                    chunkdata = []
-                    for idx in range(start, stop, step):
-                        self.file.seek(self.offset + idx*chunksize)
-                        chunkdata.append(self.file.read(chunksize))
-                    databuffer = b''.join(chunkdata)
-                    n_chunks = len(chunkdata)
-
-                newshape = tuple([n_chunks] + list(self.shape[1:]))
-                data = np.ndarray(newshape, dtype=self.dtype, buffer=databuffer)
-
-                # If the original key was an int, we need to ensure we return an array
-                # of shape (N,) rather than (1, N) for numpy compatibility.
-                if isinstance(key, int) or isinstance(keytuple[0], int):
-                    customtuple = tuple([0] + [idx for idx in keytuple[1:]])
-                    return data[customtuple]
-                elif key is None:  # Indexing with None adds a dimension, so we replicate that behavior here.
-                    return data[key]
-                customtuple = tuple([slice(None)] + [idx for idx in keytuple[1:]])
-                return data[customtuple]
-
         dtype = np.dtype(BITPIX2DTYPE[self._orig_bitpix]).newbyteorder('>')
-        lazyarray = LazyLoadArray(self, shape=self.shape, dtype=dtype, offset=self._data_offset)
-        return lazyarray
+        return LazyImageData(file=self._file, shape=self.shape, dtype=dtype, offset=self._data_offset)
 
     @lazyproperty
     def data(self):
@@ -1359,3 +1278,99 @@ class _IndexInfo:
             self.contiguous = False
         else:
             raise IndexError(f'Illegal index {indx}')
+
+
+class LazyImageData():
+    """Helper class to enable subsets of ImageHDU data to be loaded lazily via slicing.
+
+    See `_ImageBaseHDU.subset` for details on its use.
+    """
+
+    def __init__(self, file, shape, dtype, offset):
+        """Construct a LazyImageData object.
+
+        Parameters
+        ----------
+        file : file-like object
+            File object containing the data.
+            Typically a FITS image opened using ``fsspec``.
+
+        shape : tuple
+            Shape of the image.
+
+        dtype : dtype
+            Data type of the image.
+
+        offset : int
+            Position in the file where the image data starts.
+        """
+        self.file = file
+        self.shape = shape
+        self.dtype = np.dtype(dtype)
+        self.offset = offset
+
+    def __getitem__(self, key):
+        """Returns a subset of the array specified by `key`.
+
+        This function will use the open file handle to read only the chunks of the image
+        needed to extract `key`.
+        """
+        # First we check `key` and ensure it is a tuple of length self.shape
+        if isinstance(key, tuple):
+            # If the tuple starts with ellipsis, expand the length of the tuple to match the number of dimensions
+            if key[0] is ...:
+                keytuple = tuple([slice(None) for _ in range(len(self.shape)-len(key)+1)] + list(key[1:]))
+            else:
+                keytuple = key
+        elif isinstance(key, slice):
+            # Convert a single slice to a tuple
+            keytuple = tuple([key] + [slice(None) for _ in range(len(self.shape)-1)])
+        elif isinstance(key, int):
+            # Caution: subsetting is not possible; we'd have to download the entire image.
+            if key < 0:  # support negative indices
+                key = self.shape[0] + key
+            keytuple = tuple([slice(key, key+1)] + [slice(None) for _ in range(len(self.shape)-1)])
+        elif key is None or key is ...:
+            keytuple = tuple(slice(None) for _ in range(len(self.shape)))
+        else:
+            raise TypeError('Index must be a int, slice, or tuple, not {}'.format(type(key).__name__))
+
+        # Next we determine which chunks need to be obtained
+        which_chunks = keytuple[0]
+        if isinstance(which_chunks, int):
+            if which_chunks < 0:  # support negative indices
+                which_chunks = self.shape[0] + which_chunks
+            which_chunks = slice(which_chunks, which_chunks+1)
+        elif which_chunks is ...:  # ellipses
+            which_chunks = slice(None)
+
+        # Number of bytes in each chunk
+        chunksize = self.dtype.itemsize * math.prod(self.shape[1:])
+        # We will require chunks identified by #start, #stop, and #step
+        start, stop, step = which_chunks.indices(self.shape[0])
+
+        # If step=1, we can request all chunks in one read request
+        if step == 1:
+            n_chunks = stop - start
+            self.file.seek(self.offset + start*chunksize)
+            databuffer = self.file.read(n_chunks*chunksize)
+        else:  # Alternatively, emit one read request for each chunk
+            chunkdata = []
+            for idx in range(start, stop, step):
+                self.file.seek(self.offset + idx*chunksize)
+                chunkdata.append(self.file.read(chunksize))
+            databuffer = b''.join(chunkdata)
+            n_chunks = len(chunkdata)
+
+        newshape = tuple([n_chunks] + list(self.shape[1:]))
+        data = np.ndarray(newshape, dtype=self.dtype, buffer=databuffer)
+
+        # If the original key was an int, we need to ensure we return an array
+        # of shape (N,) rather than (1, N) for numpy compatibility.
+        if isinstance(key, int) or isinstance(keytuple[0], int):
+            customtuple = tuple([0] + [idx for idx in keytuple[1:]])
+            return data[customtuple]
+        elif key is None:  # Indexing with None adds a dimension, so we replicate that behavior here.
+            return data[key]
+        customtuple = tuple([slice(None)] + [idx for idx in keytuple[1:]])
+        return data[customtuple]

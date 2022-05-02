@@ -12,6 +12,7 @@ from astropy.coordinates import SkyCoord
 from astropy.utils import lazyproperty
 from astropy.wcs.utils import skycoord_to_pixel, proj_plane_pixel_scales
 from astropy.wcs import Sip
+from astropy.io.fits.hdu.image import LazyImageData
 
 __all__ = ['extract_array', 'add_array', 'subpixel_indices',
            'overlap_slices', 'NoOverlapError', 'PartialOverlapError',
@@ -563,7 +564,7 @@ class Cutout2D:
                     raise ValueError('shape can contain Quantities with only '
                                      'pixel or angular units')
 
-        if not "LazyLoadArray" in str(type(data)):  # TODO: use `isinstance` here once we moved LazyLoadArray to a permanent module
+        if not isinstance(data, LazyImageData):  # Avoid converting lazy-loaded image data to an array
             data = np.asanyarray(data)
         # reverse position because extract_array and overlap_slices
         # use (y, x), but keep the input position
