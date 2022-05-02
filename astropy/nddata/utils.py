@@ -563,7 +563,8 @@ class Cutout2D:
                     raise ValueError('shape can contain Quantities with only '
                                      'pixel or angular units')
 
-        data = np.asanyarray(data)
+        if not "LazyLoadArray" in str(type(data)):  # TODO: use `isinstance` here once we moved LazyLoadArray to a permanent module
+            data = np.asanyarray(data)
         # reverse position because extract_array and overlap_slices
         # use (y, x), but keep the input position
         pos_yx = position[::-1]
