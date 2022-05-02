@@ -113,7 +113,7 @@ def fitsopen(name, mode='readonly', memmap=None, save_backup=False,
         In addition, Amazon S3 files also require the ``s3fs`` optional
         dependency, and Google Cloud files require ``gcsfs``.
 
-        .. versionadded:: 5.1
+        .. versionadded:: 5.2
 
     fsspec_kwargs : dict, optional
         Keyword arguments passed on to ``fsspec.open``.
