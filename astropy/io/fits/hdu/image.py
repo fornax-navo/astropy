@@ -242,23 +242,21 @@ class _ImageBaseHDU(_ValidHDU):
         caching redundant file reads.  This is usually the case when the
         ``fsspec`` library is used to open the file objects.
 
-        You may wonder why the `.subset` property does not override the
-        existing `.data` property. This is the case for the following reasons:
-        * The `.data` property is implemented using Numpy, which translates
-          slicing operations into the required file read calls deep in the
-          Numpy C layer (in the case of the buffer protocol) or even in the
-          OS kernel (if memory mapping is used).  There is no obvious way to
-          call the file-like objects provided by ``fsspec`` in these layers,
-          because ``fsspec`` and its cloud access dependencies (e.g. ``boto3``)
-          are pure Python packages.
-        * This implementation does not support compressed data.
-          Fortunately, NASA's PDS standard recommends against using compression
-          in archived data products, and indeed many NASA data products do not
-          use compression.
-        * We may want to raise warnings in the case of inefficient data
-          access patterns.
-        * We may want to raise warnings if ``fsspec`` is used with an
-          inappropriate `cache_type` configuration.
+        You may wonder why the `.subset` property is introducing rather than
+        modifying the existing `ImageHDU.data` property.  This is the case
+        for two reasons:
+        * The `.data` property returns a `numpy.ndarray` object which translates
+          data slicing operations into the required file read calls. At face value
+          we may wish to build upon this. Unfortunately, these translations happens
+          deep in the NumPy C layer (in the case of the buffer protocol) or even in
+          the OS kernel (if memory mapping is used). There appears to be no obvious
+          way to call the pure Python code provided by ``fsspec`` in these layers.
+        * Although it would be possible to override `numpy.ndarray.__getitem__`
+          in pure Python, this is difficult because the instantiation
+          of an `ndarray` object appears to require the presence of a byte buffer
+          object that implements the Python Buffer Protocol (e.g., a memoryview object).
+          This is fundamentally a Python C API feature.  It is not clear
+          how an `fsspec`-backed buffer object can be implemented in pure Python.
 
         Examples
         --------
@@ -277,25 +275,18 @@ class _ImageBaseHDU(_ValidHDU):
             >>> f = fits.open(uri, fsspec_kwargs={'default_cache_type': "block", 'default_block_size': 5_000_000})
         """
 
-        class LazyLoadArray(np.ndarray):
+        class LazyLoadArray():
 
-            def __new__(cls, file, shape, dtype, offset, *args, **kwargs):
-                # This array object is backed by a zero-length buffer,
-                # because we have not been able to figure out how to create a
-                # buffer (i.e. a memoryview) that is backed by an fsspec file object.
-                # As a result, many array methods will fail.
-                return super(LazyLoadArray, cls).__new__(cls, shape=(0), buffer=bytearray(), dtype=dtype)
-
-            def __init__(self, file, shape, dtype, offset, *args, **kwargs):
-                super(LazyLoadArray, self).__init__()
-                self.file = file
-                self._shape = shape
+            def __init__(self, imagehdu, shape, dtype, offset, *args, **kwargs):
+                self.imagehdu = imagehdu
+                self.file = imagehdu._file
+                self.shape = shape
                 self.dtype = np.dtype(dtype)
                 self.offset = offset
 
-            @property
-            def shape(self):
-                return self._shape
+            def __array__(self):
+                # Caution: this will download the entire file!
+                return self.imagehdu.data
 
             def __getitem__(self, key):
                 """Returns a subset of the array specified by `key`.
@@ -364,8 +355,8 @@ class _ImageBaseHDU(_ValidHDU):
                 return data[customtuple]
 
         dtype = np.dtype(BITPIX2DTYPE[self._orig_bitpix]).newbyteorder('>')
-        retriever = LazyLoadArray(self._file, shape=self.shape, dtype=dtype, offset=self._data_offset)
-        return retriever
+        lazyarray = LazyLoadArray(self, shape=self.shape, dtype=dtype, offset=self._data_offset)
+        return lazyarray
 
     @lazyproperty
     def data(self):
