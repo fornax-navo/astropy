@@ -119,7 +119,7 @@ def fitsopen(name, mode='readonly', memmap=None, save_backup=False,
         Keyword arguments passed on to ``fsspec.open``.
         Defaults to {"anon": True, "default_cache_type": "block"}.
 
-        .. versionadded:: 5.1
+        .. versionadded:: 5.2
 
     checksum : bool, str, optional
         If `True`, verifies that both ``DATASUM`` and ``CHECKSUM`` card values
