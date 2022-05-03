@@ -134,6 +134,14 @@ because by that point you are likely to run out of physical memory anyways), but
     ``del hdul[0].data``. (This works so long as there are no other references
     held to the data array.)
 
+.. _fits-cloud-files:
+
+Working with cloud-hosted files
+"""""""""""""""""""""""""""""""
+
+TODO: Insert narrative on opening cloud files with fsspec here.
+
+
 Unsigned integers
 """""""""""""""""
 

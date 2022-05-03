@@ -217,7 +217,7 @@ class _ImageBaseHDU(_ValidHDU):
 
     @property
     def subset(self):
-        """Read a subset of the image into a `~numpy.ndarray`.
+        """Access a subset of the image without reading the entire file.
 
         This property enables a subset of the FITS image to be obtained without
         reading or downloading the entire file.  This is achieved by dynamically
@@ -228,8 +228,8 @@ class _ImageBaseHDU(_ValidHDU):
         dimension.  For example, an image of shape (100, 200) is defined to be
         composed of 100 chunks.  As a result, slicing operations which limit
         the data required along the first dimension will be more efficient.
-        For example, `.subset[10:12, :]` would trigger two chunks to be
-        downloaded, whereas `.subset[:, 10:12]` requires all chunks to
+        For example, ``.subset[10:12, :]`` would trigger two chunks to be
+        downloaded, whereas ``.subset[:, 10:12]`` requires all chunks to
         be downloaded.
 
         This feature is intended to be used with files which are backed by a
@@ -242,9 +242,10 @@ class _ImageBaseHDU(_ValidHDU):
         caching redundant file reads.  This is usually the case when the
         ``fsspec`` library is used to open the file objects.
 
-        You may wonder why the `.subset` property is introducing rather than
+        You may wonder why the `.subset` property is introduced rather than
         modifying the existing `ImageHDU.data` property.  This is the case
         for two reasons:
+
         * The `.data` property returns a `numpy.ndarray` object which translates
           data slicing operations into the required file read calls. At face value
           we may wish to build upon this. Unfortunately, these translations happens
@@ -256,7 +257,7 @@ class _ImageBaseHDU(_ValidHDU):
           of an `ndarray` object appears to require the presence of a byte buffer
           object that implements the Python Buffer Protocol (e.g., a memoryview object).
           This is fundamentally a Python C API feature.  It is not clear
-          how an `fsspec`-backed buffer object can be implemented in pure Python.
+          how an ``fsspec``-backed buffer object can be implemented in pure Python.
 
         Examples
         --------

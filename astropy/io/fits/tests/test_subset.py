@@ -9,6 +9,7 @@ TODO
 * Review subset docstring
 * Review NumPy array subclassing, e.g. https://github.com/seung-lab/cloud-volume
 * Add test case for http:// paths.
+* What happens when data is written via subset, e.g., `.subset[0,0] = 1`?
 
 * Add indexing tests with specified dimensions, e.g.:
     (0,1) or ((0,1), (2,3))
