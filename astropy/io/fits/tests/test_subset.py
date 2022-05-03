@@ -103,8 +103,8 @@ def test_subset_from_s3():
     # Expected array was obtained by downloading the file locally and executing:
     # with fits.open(local_path) as hdulist:
     #     hdulist[1].data[1000:1002, 2000:2003]
-    expected = np.array([[ 0.00545289,  0.0051066,  -0.00034149],
-                         [ 0.00120684,  0.00782754,  0.00546404]])
+    expected = np.array([[0.00545289, 0.0051066, -0.00034149],
+                         [0.00120684, 0.00782754, 0.00546404]])
     with fits.open(uri) as f:
         # Do we retrieve the expected array?
         assert_allclose(f[1].subset[1000:1002, 2000:2003], expected, atol=1e-7)
