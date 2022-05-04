@@ -151,21 +151,11 @@ class _File:
         # Handle cloud URIs with fsspec
         if use_fsspec:
             if not HAS_FSSPEC:
-                raise ModuleNotFoundError("you need to install the `fsspec` Python package to open this file")
+                raise ModuleNotFoundError("please install `fsspec` to access this file")
 
             # We use a local import for fsspec to avoid slowing down
             # astropy.io.fits when fsspec is not required
             import fsspec
-
-            if fsspec_kwargs is None:
-                fsspec_kwargs = {}
-            if "anon" not in fsspec_kwargs:
-                fsspec_kwargs["anon"] = True
-            # The "block" cache type is preferred for small random access reads,
-            # which are common for FITS cutouts.
-            if "default_cache_type" not in fsspec_kwargs:
-                fsspec_kwargs["default_cache_type"] = "block"
-
             fileopen = fsspec.open(fileobj, **fsspec_kwargs)
             fileobj = fileopen.open()
 

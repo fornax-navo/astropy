@@ -106,18 +106,23 @@ def fitsopen(name, mode='readonly', memmap=None, save_backup=False,
         .. versionadded:: 4.2
 
     use_fsspec : bool, optional
-        Is the fsspec library to be used to open the file?
-        Defaults to `False` unless ``name`` starts with prefix "s3://"
-        (Amazon S3 storage) or prefix "gcs://" (Google Cloud Storage).
+        Use the `fsspec` library to open the file? Defaults to `False` unless
+        the ``name`` parameter starts with the Amazon S3 storage prefix `s3://`
+        or the Google Cloud Storage prefix `gs://`.
         This feature requires the optional ``fsspec`` package to be installed.
-        In addition, Amazon S3 files also require the ``s3fs`` optional
-        dependency, and Google Cloud files require ``gcsfs``.
+        In addition, Amazon S3 paths require the ``s3fs`` package and Google
+        Cloud paths require ``gcsfs``. A ``ModuleNotFoundError`` will be raised
+        if a required dependency is missing.
 
         .. versionadded:: 5.2
 
     fsspec_kwargs : dict, optional
-        Keyword arguments passed on to ``fsspec.open``.
-        Defaults to {"anon": True, "default_cache_type": "block"}.
+        Keyword arguments passed on to `fsspec.open`, which can be used to
+        configure cloud storage credentials and caching behavior.
+        Defaults to ``{"anon": True, "default_cache_type": "block"}`` for
+        paths with prefix ``s3://``, and ``{"cache_type": "block"}`` for
+        paths with prefix ``http(s)://``.
+        See `fsspec`'s documentation for available parameters.
 
         .. versionadded:: 5.2
 
@@ -183,16 +188,18 @@ def fitsopen(name, mode='readonly', memmap=None, save_backup=False,
         lazy_load_hdus = bool(lazy_load_hdus)
 
     if use_fsspec is None:
-        if isinstance(name, str) and name.startswith(("s3://", "gcs://")):
+        if isinstance(name, str) and name.startswith(("s3://", "gs://")):
             use_fsspec = True
         else:
             use_fsspec = False
     else:
         use_fsspec = bool(use_fsspec)
 
-    # fsspec should only be used for opening URI strings (e.g., "s3://")
-    if use_fsspec and not isinstance(name, str):
-        raise TypeError("`name` must be a string when `use_fsspec=True`")
+    if use_fsspec:
+        if not isinstance(name, str):
+            raise TypeError("`name` must be a string when `use_fsspec=True`")
+        if fsspec_kwargs is None:
+            fsspec_kwargs = _default_fsspec_kwargs(name)
 
     if 'uint' not in kwargs:
         kwargs['uint'] = conf.enable_uint
@@ -204,6 +211,23 @@ def fitsopen(name, mode='readonly', memmap=None, save_backup=False,
                             lazy_load_hdus, ignore_missing_simple,
                             use_fsspec=use_fsspec, fsspec_kwargs=fsspec_kwargs,
                             **kwargs)
+
+
+def _default_fsspec_kwargs(path):
+    """Returns the default for the ``fsspec_kwargs`` parameter of `fitsopen`."""
+    # The "block" cache type is preferred for small random access reads,
+    # which are common for FITS cutouts.
+    if path.startswith(("http://", "https://")):
+        return {"cache_type": "block"}
+
+    # For S3 objects, default to `anon=True` if no credentials
+    # are provided, because a lot of astronomy data is available
+    # in public S3 buckets.
+    if path.startswith("s3://"):
+        return {"anon": True,
+                "default_cache_type": "block"}
+
+    return None
 
 
 class HDUList(list, _Verify):
