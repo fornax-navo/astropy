@@ -188,10 +188,17 @@ class _ImageBaseHDU(_ValidHDU):
         return the appropriate slice of the data, and loads *only* that section
         into memory.
 
-        Sections are mostly obsoleted by memmap support, but should still be
-        used to deal with very large scaled images.  See the
-        :ref:`astropy:data-sections` section of the Astropy documentation for
-        more details.
+        Sections are very useful for retrieving a small subset of data
+        from a remote FITS file that has been opened with the
+        ``use_fsspec=True`` parameter.  For example, you can use this feature
+        to download a small cutout from a large image hosted in the Amazon S3
+        cloud (see the :ref:`astropy:fits-cloud-file` section of the Astropy
+        documentation for more details.)
+
+        For local files, sections are mostly obsoleted by memmap support, but
+        should still be used to deal with very large scaled images.  See the
+        :ref:`astropy:data-sections` section of the documentation for more
+        details.
         """
 
         return Section(self)
@@ -1003,6 +1010,10 @@ class Section:
     def __init__(self, hdu):
         self.hdu = hdu
 
+    @property
+    def shape(self):
+        return self.hdu.shape  # enables Cutout2D to accept `Section`
+
     def __getitem__(self, key):
         if not isinstance(key, tuple):
             key = (key,)
@@ -1262,6 +1273,8 @@ class ImageHDU(_ImageBaseHDU, ExtensionHDU):
 class _IndexInfo:
     def __init__(self, indx, naxis):
         if _is_int(indx):
+            if indx < 0:
+                indx = indx + naxis
             if 0 <= indx < naxis:
                 self.npts = 1
                 self.offset = indx
