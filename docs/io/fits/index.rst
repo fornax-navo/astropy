@@ -139,7 +139,7 @@ because by that point you are likely to run out of physical memory anyways), but
 Working with cloud-hosted files
 """""""""""""""""""""""""""""""
 
-The :func:`open` function supports a ``use_fsspec`` argument which allows file paths to be opened using the `fsspec <https://filesystem-spec.readthedocs.io>`__ package.  This package supports a range of remote and distributed storage backends, such as Amazon and Google Cloud Storage. The ``use_fsspec`` parameter automatically defaults to ``True`` if a file path is passed which starts with prefix ``s3://`` for Amazon S3 or ``gcs://`` for Google Cloud. For example, we can open a Hubble Space Telescope image hosted in the data archive's Amazon S3 bucket as follows:
+The :func:`open` function supports a ``use_fsspec`` argument which allows file paths to be opened using the `fsspec <https://filesystem-spec.readthedocs.io>`__ package.  This package supports a range of remote and distributed storage backends, such as Amazon and Google Cloud Storage. The ``use_fsspec`` parameter automatically defaults to ``True`` if a file path is passed which starts with prefix ``s3://`` for Amazon S3 or ``gs://`` for Google Cloud. For example, we can open a Hubble Space Telescope image hosted in the data archive's Amazon S3 bucket as follows:
 
 .. doctest-remote-data::
 

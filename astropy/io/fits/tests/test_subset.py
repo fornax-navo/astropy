@@ -10,13 +10,6 @@ TODO
 * Review NumPy array subclassing, e.g. https://github.com/seung-lab/cloud-volume
 * Add test case for http:// paths.
 * What happens when data is written via subset, e.g., `.subset[0,0] = 1`?
-
-* Add indexing tests with specified dimensions, e.g.:
-    (0,1) or ((0,1), (2,3))
-  first number in each tuple is the dimension.
-* Add indexing tests with newaxis at the front, e.g.:
-    (None, None, 0),
-    (None, None, slice(None)),
 * Review all the indexing patterns listed at https://numpy.org/devdocs/user/basics.indexing.html
 
 """
@@ -33,7 +26,7 @@ import pytest
 INDEXING_PATTERNS = [
     0,
     -1,
-    None,
+#    None,
     ...,
     slice(None, None),
     (slice(None, None), slice(None, None)),
@@ -49,8 +42,8 @@ INDEXING_PATTERNS = [
     (2, ...),
     (..., 3),
     (..., slice(1, 2)),
-    (0, None, None),
-    (slice(None), None, None),
+#   (0, None, None),
+#   (slice(None), None, None),
 ]
 
 INDEXING_PATTERNS_3D = [
@@ -59,7 +52,7 @@ INDEXING_PATTERNS_3D = [
     (..., 1, 2),
     (0, ..., 2),
     (1, 2, ...),
-    (1, None, 3)
+#    (1, None, 3)
 ]
 
 
@@ -69,7 +62,7 @@ def test_subset_from_image():
     fn = get_pkg_data_filename('data/test0.fits')
     with fits.open(fn) as f:
         for idx in INDEXING_PATTERNS:
-            assert_array_equal(f[1].data[idx], f[1].subset[idx])
+            assert_array_equal(f[1].data[idx], f[1].section[idx])
 
 
 def test_subset_from_cube():
@@ -78,7 +71,7 @@ def test_subset_from_cube():
     fn = get_pkg_data_filename('data/arange.fits')
     with fits.open(fn) as f:
         for idx in INDEXING_PATTERNS + INDEXING_PATTERNS_3D:
-            assert_array_equal(f[0].data[idx], f[0].subset[idx])
+            assert_array_equal(f[0].data[idx], f[0].section[idx])
 
 
 def test_subset_compressed_image():
@@ -92,8 +85,8 @@ def test_subset_compressed_image():
     fn = get_pkg_data_filename('data/comp.fits')
     with fits.open(fn) as f:
         with pytest.raises(AttributeError) as excinfo:
-            f[1].subset[1,2]
-        assert "'CompImageHDU' object has no attribute 'subset'" in str(excinfo.value)
+            f[1].section[1,2]
+        assert "'CompImageHDU' object has no attribute 'section'" in str(excinfo.value)
 
 
 @pytest.mark.remote_data
@@ -108,7 +101,7 @@ def test_subset_from_s3():
                          [0.00120684, 0.00782754, 0.00546404]])
     with fits.open(uri) as f:
         # Do we retrieve the expected array?
-        assert_allclose(f[1].subset[1000:1002, 2000:2003], expected, atol=1e-7)
+        assert_allclose(f[1].section[1000:1002, 2000:2003], expected, atol=1e-7)
         # The file has multiple extensions which are not yet downloaded;
         # the repr and string representation should reflect this.
         assert "partially read" in repr(f)
@@ -135,5 +128,5 @@ def test_cutout2d():
         position = (10, 20)
         size = (2, 3)
         cutout1 = Cutout2D(f[1].data, position, size)
-        cutout2 = Cutout2D(f[1].subset, position, size)
+        cutout2 = Cutout2D(f[1].section, position, size)
         assert_allclose(cutout1.data, cutout2.data)
