@@ -139,7 +139,20 @@ because by that point you are likely to run out of physical memory anyways), but
 Working with cloud-hosted files
 """""""""""""""""""""""""""""""
 
-TODO: Insert narrative on opening cloud files with fsspec here.
+The :func:`open` function supports a ``use_fsspec`` argument which allows file paths to be opened using the `fsspec <https://filesystem-spec.readthedocs.io>`__ package.  This package supports a range of remote and distributed storage backends, such as Amazon and Google Cloud Storage. The ``use_fsspec`` parameter automatically defaults to ``True`` if a file path is passed which starts with prefix ``s3://`` (Amazon S3) or ``gcs://`` (Google Cloud). For example, we can open a Hubble Space Telescope image hosted in the data archive's Amazon S3 bucket as follows:
+
+.. doctest-remote-data::
+
+    >>> uri = "s3://stpubdata/hst/public/j8pu/j8pu0y010/j8pu0y010_drc.fits"
+    >>> with fits.open(uri) as hdul:
+    ...    data = hdul[1].section[10:12, 20:22]
+
+Note that we accessed the data using the `.section` attribute rather than `.data`.  By using `.section`, only the necessary parts of the FITS file will be downloaded rather than the entire file.  The use of `.section` enables small cutouts of large remote FITS files to be obtained in seconds!
+
+.. topic:: Examples:
+
+    See also :ref:`sphx_glr_generated_examples_io_cloud-hosted-fits-files.py`.
+
 
 
 Unsigned integers
