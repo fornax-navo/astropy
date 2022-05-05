@@ -102,7 +102,6 @@ intersphinx_mapping['h5py'] = ('https://docs.h5py.org/en/stable/', None)  # noqa
 intersphinx_mapping['asdf-astropy'] = ('https://asdf-astropy.readthedocs.io/en/latest/', None)  # noqa: F405
 intersphinx_mapping['fsspec'] = ('https://filesystem-spec.readthedocs.io/en/latest/', None)  # noqa: F405
 
-
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns.append('_templates')  # noqa: F405

@@ -306,8 +306,9 @@ class HDUList(list, _Verify):
         return super().__len__()
 
     def __repr__(self):
-        # If `use_fsspec=True` and the file has not been fully downloaded
-        # yet, we return a simplified repr to avoid triggering a full download
+        # Special case: if the FITS file is located on a remote file system
+        # and has not been fully read yet, we return a simplified repr to
+        # avoid downloading the entire file
         if not self._read_all and self._file and self._file.use_fsspec:
             return f"{type(self)} (partially read)"
 

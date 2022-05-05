@@ -2,8 +2,8 @@
 
 ..  _fits_io_cloud:
 
-Working with FITS files in the cloud
-************************************
+Obtaining cutouts from cloud-hosted FITS files
+**********************************************
 
 **PLACEHOLDER FOR MORE DETAILED DOCUMENTATION**
 
