@@ -108,20 +108,18 @@ def fitsopen(name, mode='readonly', memmap=None, save_backup=False,
     use_fsspec : bool, optional
         Use the `fsspec` library to open the file? Defaults to `False` unless
         the ``name`` parameter starts with the Amazon S3 storage prefix `s3://`
-        or the Google Cloud Storage prefix `gs://`.
-        This feature requires the optional ``fsspec`` package to be installed.
-        In addition, Amazon S3 paths require the ``s3fs`` package and Google
-        Cloud paths require ``gcsfs``. A ``ModuleNotFoundError`` will be raised
-        if a required dependency is missing.
+        or the Google Cloud Storage prefix `gs://`.  Can also be used for paths
+        with other prefixes (e.g. `http://`), but in this case you must
+        explicitely pass `use_fsspec=True`.
+        Use of this feature requires the optional ``fsspec`` package.
+        A ``ModuleNotFoundError`` will be raised if a dependency is missing.
 
         .. versionadded:: 5.2
 
     fsspec_kwargs : dict, optional
-        Keyword arguments passed on to `fsspec.open`, which can be used to
+        Keyword arguments passed on to `fsspec.open`. This can be used to
         configure cloud storage credentials and caching behavior.
-        Defaults to ``{"anon": True, "default_cache_type": "block"}`` for
-        paths with prefix ``s3://``, and ``{"cache_type": "block"}`` for
-        paths with prefix ``http(s)://``.
+        Defaults to ``{"anon": True}`` for paths with prefix ``s3://``.
         See `fsspec`'s documentation for available parameters.
 
         .. versionadded:: 5.2

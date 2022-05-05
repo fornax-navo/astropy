@@ -564,7 +564,7 @@ class Cutout2D:
                     raise ValueError('shape can contain Quantities with only '
                                      'pixel or angular units')
 
-        if not isinstance(data, Section):  # Avoid converting lazy-loaded image data to an array
+        if not isinstance(data, Section):  # Accept lazy-loaded image sections
             data = np.asanyarray(data)
         # reverse position because extract_array and overlap_slices
         # use (y, x), but keep the input position

@@ -147,7 +147,7 @@ The :func:`open` function supports a ``use_fsspec`` argument which allows file p
     >>> with fits.open(uri, use_fsspec=True) as hdul:
     ...    data = hdul[1].section[10:12, 20:22]
 
-Note that the example above accesses the image data using the `.section` attribute rather than the traditional `.data` attribute.  Using `.section` ensures that only the necessary parts of the FITS image are downloaded.  The use of `.section` prevents AstroPy from downloading the entire underlying image, which *significantly* speeds up use cases which only require small cutouts from large remote FITS files.
+Note that the example above accesses the image data using the `.section` attribute rather than the traditional `.data` attribute.  The use of `.section` ensures that only the necessary parts of the FITS image are obtained from the server, rather than downloading the entire file. This can significantly speed up your code if you require small cutouts from large remote FITS files.
 See :ref:`fits_io_cloud` for additional information on working with remote or cloud-hosted FITS files.
 
 .. seealso:: :ref:`fits_io_cloud`.
