@@ -187,17 +187,21 @@ class _ImageBaseHDU(_ValidHDU):
         return the appropriate slice of the data, and loads *only* that section
         into memory.
 
-        Sections are very useful for retrieving a small subset of data
-        from a remote FITS file that has been opened with the
-        ``use_fsspec=True`` parameter.  For example, you can use this feature
-        to download a small cutout from a large image hosted in the Amazon S3
-        cloud (see the :ref:`astropy:fits-cloud-file` section of the Astropy
+        Sections are useful for retrieving a small subset of data from a remote
+        file that has been opened with the ``use_fsspec=True`` parameter.
+        For example, you can use this feature to download a small cutout from
+        a large FITS image hosted in the Amazon S3 cloud (see the
+        :ref:`astropy:fits-cloud-files` section of the Astropy
         documentation for more details.)
 
         For local files, sections are mostly obsoleted by memmap support, but
-        should still be used to deal with very large scaled images.  See the
-        :ref:`astropy:data-sections` section of the documentation for more
-        details.
+        should still be used to deal with very large scaled images.
+
+        Note that sections cannot currently be written to.  Moreover, any
+        in-memory updates to the image's `.data` property may not be
+        reflected in the slices obtained via `.section`. See the
+        :ref:`astropy:data-sections` section of the documentation for
+        more details.
         """
 
         return Section(self)

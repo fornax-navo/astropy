@@ -1,12 +1,11 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-"""Can `astropy.io.fits.open` access remote data using `use_fsspec=True`?
+"""Can `astropy.io.fits.open` access (remote) data using the fsspec package?
 
 TODO
 ====
-* Add test verifying i/o behavior
-* Add test for treatment of optional fsspec dependency.
-* What happens when data is written via subset, e.g., `.subset[0,0] = 1`?
+* Add test verifying i/o behavior?
 * Improve narrative docs.
+* Edit the "Data Sections" section of the docs.
 * Review GitHub PR draft.
 """
 from astropy.io import fits
@@ -21,7 +20,7 @@ import pytest
 
 @pytest.mark.skipif("not HAS_FSSPEC")
 def test_fsspec_local():
-    """Can we use fsspec to open a local file?"""
+    """Can we use fsspec to read a local file?"""
     fn = get_pkg_data_filename('data/test0.fits')
     hdulist_classic = fits.open(fn, use_fsspec=False)
     hdulist_fsspec = fits.open(fn, use_fsspec=True)
@@ -31,6 +30,24 @@ def test_fsspec_local():
     assert "partially read" in repr(hdulist_fsspec)
     hdulist_classic.close()
     hdulist_fsspec.close()
+
+
+@pytest.mark.skipif("not HAS_FSSPEC")
+def test_fsspec_local_write(tmpdir):
+    """Can we write to a local file that was opened using fsspec?"""
+    fn = get_pkg_data_filename('data/test0.fits')
+    fn_tmp = tmpdir / "tmp.fits"
+    with fits.open(fn, use_fsspec=True) as hdul:
+        # writing to a section is never allowed
+        with pytest.raises(TypeError):
+            hdul[1].section[0, 0] = -999
+        # however writing to .data should work
+        hdul[1].data[2, 3] = -999
+        assert hdul[1].data[2,3] == -999
+        hdul.writeto(fn_tmp)
+    # Is the new value present when we re-open the file?
+    with fits.open(fn_tmp) as hdul:
+        assert hdul[1].data[2,3] == -999
 
 
 @pytest.mark.remote_data
@@ -83,11 +100,13 @@ def test_fsspec_cutout2d():
 
 
 def test_fsspec_compressed():
-    """Does fsspec work with compressed data?"""
+    """Does fsspec support compressed data correctly?"""
     # comp.fits[1] is a compressed image with shape (440, 300)
     fn = get_pkg_data_filename('data/comp.fits')
     with fits.open(fn, use_fsspec=True) as hdul:
-        # The .section attribute does not support compressed images
+        # The .data attribute should work as normal
+        assert hdul[1].data[0,0] == 7
+        # However the .section attribute does not support compressed data
         with pytest.raises(AttributeError) as excinfo:
             hdul[1].section[1,2]
         assert "'CompImageHDU' object has no attribute 'section'" in str(excinfo.value)
