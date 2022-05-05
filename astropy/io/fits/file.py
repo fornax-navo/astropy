@@ -31,7 +31,8 @@ if HAS_BZ2:
     import bz2
 
 from astropy.utils.compat.optional_deps import HAS_FSSPEC
-
+if HAS_FSSPEC:
+    import fsspec
 
 # Maps astropy.io.fits-specific file mode names to the appropriate file
 # modes to use for the underlying raw files.
@@ -148,16 +149,12 @@ class _File:
         if mode is None:
             mode = 'readonly'
 
-        # Handle cloud URIs with fsspec
+        # Handle remote or cloud URIs with fsspec
         if use_fsspec:
             if not HAS_FSSPEC:
                 raise ModuleNotFoundError("please install `fsspec` to access this file")
             if fsspec_kwargs is None:
                 fsspec_kwargs = {}
-
-            # We use a local import for fsspec to avoid slowing down
-            # astropy.io.fits when fsspec is not required
-            import fsspec
             fileopen = fsspec.open(fileobj, **fsspec_kwargs)
             fileobj = fileopen.open()
 

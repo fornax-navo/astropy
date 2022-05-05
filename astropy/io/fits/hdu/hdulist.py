@@ -198,8 +198,12 @@ def fitsopen(name, mode='readonly', memmap=None, save_backup=False,
     if use_fsspec:
         if not isinstance(name, str):
             raise TypeError("`name` must be a string when `use_fsspec=True`")
-        if fsspec_kwargs is None:
-            fsspec_kwargs = _default_fsspec_kwargs(name)
+        # For s3:// paths, it is useful to have fsspec default to `anon=True`
+        # because Hubble's data archive is available via a public S3 buckets.
+        # Accessing a public bucket without credentials raises a
+        # `NoCredentialsError` unless `anon=True` is passed explicitely.
+        if fsspec_kwargs is None and name.startswith("s3://"):
+            fsspec_kwargs = {'anon': True}
 
     if 'uint' not in kwargs:
         kwargs['uint'] = conf.enable_uint
@@ -211,23 +215,6 @@ def fitsopen(name, mode='readonly', memmap=None, save_backup=False,
                             lazy_load_hdus, ignore_missing_simple,
                             use_fsspec=use_fsspec, fsspec_kwargs=fsspec_kwargs,
                             **kwargs)
-
-
-def _default_fsspec_kwargs(path):
-    """Returns the default for the ``fsspec_kwargs`` parameter of `fitsopen`."""
-    # The "block" cache type is preferred for small random access reads,
-    # which are common for FITS cutouts.
-    if path.startswith(("http://", "https://")):
-        return {"cache_type": "block"}
-
-    # For S3 objects, default to `anon=True` if no credentials
-    # are provided, because a lot of astronomy data is available
-    # in public S3 buckets.
-    if path.startswith("s3://"):
-        return {"anon": True,
-                "default_cache_type": "block"}
-
-    return None
 
 
 class HDUList(list, _Verify):
