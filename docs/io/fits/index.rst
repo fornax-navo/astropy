@@ -136,28 +136,29 @@ because by that point you are likely to run out of physical memory anyways), but
 
 .. _fits-cloud-files:
 
-Working with remote or cloud-hosted files
-"""""""""""""""""""""""""""""""""""""""""
+Working with cloud-hosted files
+"""""""""""""""""""""""""""""""
 
 The :func:`open` function supports a ``use_fsspec`` argument which allows file
 paths to be opened using `fsspec <https://filesystem-spec.readthedocs.io>`__.
-The `fsspec` package supports a range of remote and distributed storage
-backends such as Amazon and Google Cloud Storage. For example, we can open a
-Hubble Space Telescope image hosted in the Hubble data archive's public
-Amazon S3 bucket as follows::
+The ``fsspec`` package supports a range of remote and distributed storage
+backends such as Amazon and Google Cloud Storage. For example, we can access a
+Hubble Space Telescope image located in the Hubble's public
+Amazon S3 bucket as follows:
 
 .. doctest-remote-data::
     uri = "s3://stpubdata/hst/public/j8pu/j8pu0y010/j8pu0y010_drc.fits"
     with fits.open(uri, use_fsspec=True) as hdul:
-        data = hdul[1].section[10:12, 20:22]
+        # Download a 10-by-20 pixel cutout image
+        cutout = hdul[1].section[10:20, 30:50]
 
-Note that the example above accesses the image data using the `.section`
-attribute rather than the traditional `.data` attribute.
+Note that the example above obtains a cutout image using the `ImageHDU.section`
+attribute rather than the traditional `ImageHDU.data` attribute.
 The use of `.section` ensures that only the necessary parts of the FITS
-image are transferred from the server, rather than downloading the entire file.
-This can significantly speed up your code if you require small cutouts from
-large remote FITS files.  See :ref:`fits_io_cloud` for additional information
-on working with remote or cloud-hosted FITS files.
+image are transferred from the server, rather than downloading the entire data array.
+This trick can significantly speed up your code if you require small cutouts from
+large FITS files located on slow (remote) storage systems. 
+See :ref:`fits_io_cloud` for additional information on working with remote or cloud-hosted FITS files in this way.
 
 .. seealso:: :ref:`fits_io_cloud`.
 
