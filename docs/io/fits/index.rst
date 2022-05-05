@@ -139,16 +139,25 @@ because by that point you are likely to run out of physical memory anyways), but
 Working with remote or cloud-hosted files
 """""""""""""""""""""""""""""""""""""""""
 
-The :func:`open` function supports a ``use_fsspec`` argument which allows file paths to be opened using `fsspec <https://filesystem-spec.readthedocs.io>`__.  The `fsspec` package supports a range of remote and distributed storage backends such as Amazon and Google Cloud Storage. For example, we can open a Hubble Space Telescope image hosted in the Hubble data archive's public Amazon S3 bucket as follows:
+The :func:`open` function supports a ``use_fsspec`` argument which allows file
+paths to be opened using `fsspec <https://filesystem-spec.readthedocs.io>`__.
+The `fsspec` package supports a range of remote and distributed storage
+backends such as Amazon and Google Cloud Storage. For example, we can open a
+Hubble Space Telescope image hosted in the Hubble data archive's public
+Amazon S3 bucket as follows::
 
 .. doctest-remote-data::
+    uri = "s3://stpubdata/hst/public/j8pu/j8pu0y010/j8pu0y010_drc.fits"
+    with fits.open(uri, use_fsspec=True) as hdul:
+        data = hdul[1].section[10:12, 20:22]
 
-    >>> uri = "s3://stpubdata/hst/public/j8pu/j8pu0y010/j8pu0y010_drc.fits"
-    >>> with fits.open(uri, use_fsspec=True) as hdul:
-    ...    data = hdul[1].section[10:12, 20:22]
-
-Note that the example above accesses the image data using the `.section` attribute rather than the traditional `.data` attribute.  The use of `.section` ensures that only the necessary parts of the FITS image are obtained from the server, rather than downloading the entire file. This can significantly speed up your code if you require small cutouts from large remote FITS files.
-See :ref:`fits_io_cloud` for additional information on working with remote or cloud-hosted FITS files.
+Note that the example above accesses the image data using the `.section`
+attribute rather than the traditional `.data` attribute.
+The use of `.section` ensures that only the necessary parts of the FITS
+image are transferred from the server, rather than downloading the entire file.
+This can significantly speed up your code if you require small cutouts from
+large remote FITS files.  See :ref:`fits_io_cloud` for additional information
+on working with remote or cloud-hosted FITS files.
 
 .. seealso:: :ref:`fits_io_cloud`.
 
@@ -978,6 +987,7 @@ Using `astropy.io.fits`
    usage/unfamiliar
    usage/scripts
    usage/misc
+   usage/cloud
 
 Command-Line Utilities
 ======================

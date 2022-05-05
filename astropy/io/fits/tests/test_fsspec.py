@@ -6,7 +6,6 @@ TODO
 * Add test verifying i/o behavior?
 * Improve narrative docs.
 * Edit the "Data Sections" section of the docs.
-* Review GitHub PR draft.
 """
 from astropy.io import fits
 from astropy.nddata import Cutout2D
@@ -45,9 +44,16 @@ def test_fsspec_local_write(tmpdir):
         hdul[1].data[2, 3] = -999
         assert hdul[1].data[2,3] == -999
         hdul.writeto(fn_tmp)
+
     # Is the new value present when we re-open the file?
     with fits.open(fn_tmp) as hdul:
         assert hdul[1].data[2,3] == -999
+
+    # Does fsspec support `mode="update"`?
+    with fits.open(str(fn_tmp), use_fsspec=True, mode="update") as hdul:
+        hdul[1].data[2,3] = 42
+    with fits.open(fn_tmp) as hdul:
+        assert hdul[1].data[2,3] == 42
 
 
 @pytest.mark.remote_data
