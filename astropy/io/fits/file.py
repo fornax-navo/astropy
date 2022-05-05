@@ -152,6 +152,8 @@ class _File:
         if use_fsspec:
             if not HAS_FSSPEC:
                 raise ModuleNotFoundError("please install `fsspec` to access this file")
+            if fsspec_kwargs is None:
+                fsspec_kwargs = {}
 
             # We use a local import for fsspec to avoid slowing down
             # astropy.io.fits when fsspec is not required

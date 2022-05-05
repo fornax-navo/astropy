@@ -222,69 +222,6 @@ class _ImageBaseHDU(_ValidHDU):
         self._modified = True
         self.update_header()
 
-    @property
-    def subset(self):
-        """Access a subset of the image without reading the entire file.
-
-        This property enables a subset of the FITS image to be obtained without
-        reading or downloading the entire file.  This is achieved by dynamically
-        translating data slicing operations into a set of file seek and read
-        operations which only access the necessary "chunks" of the file.
-
-        The number of "chunks" in a file is defined as the length of the first
-        dimension.  For example, an image of shape (100, 200) is defined to be
-        composed of 100 chunks.  As a result, slicing operations which limit
-        the data required along the first dimension will be more efficient.
-        For example, ``.subset[10:12, :]`` would trigger two chunks to be
-        downloaded, whereas ``.subset[:, 10:12]`` requires all chunks to
-        be downloaded.
-
-        This feature is intended to be used with files which are backed by a
-        (slow) remote data source. Specifically, this feature is intended
-        to enable subsets of FITS images hosted in AWS S3 cloud storage
-        to be accessed in an efficient way via the ``fsspec`` library.
-
-        This property does not offer data caching features.  It is assumed
-        that the underlying file object (``ImageHDU._file``) takes care of
-        caching redundant file reads.  This is usually the case when the
-        ``fsspec`` library is used to open the file objects.
-
-        You may wonder why the `.subset` property is introduced rather than
-        modifying the existing `ImageHDU.data` property.  This is the case
-        for two reasons:
-
-        * The `.data` property returns a `numpy.ndarray` object which translates
-          data slicing operations into the required file read calls. At face value
-          we may wish to build upon this. Unfortunately, these translations happens
-          deep in the NumPy C layer (in the case of the buffer protocol) or even in
-          the OS kernel (if memory mapping is used). There appears to be no obvious
-          way to call the pure Python code provided by ``fsspec`` in these layers.
-        * Although it would be possible to override `numpy.ndarray.__getitem__`
-          in pure Python, this is difficult because the instantiation
-          of an `ndarray` object appears to require the presence of a byte buffer
-          object that implements the Python Buffer Protocol (e.g., a memoryview object).
-          This is fundamentally a Python C API feature.  It is not clear
-          how an ``fsspec``-backed buffer object can be implemented in pure Python.
-
-        Examples
-        --------
-        To extract a subset of a cloud-hosted FITS image:
-
-            >>> from astropy.io import fits
-            >>> uri = "s3://stpubdata/hst/public/j8pu/j8pu0y010/j8pu0y010_drc.fits"
-            >>> f = fits.open(uri)
-            >>> f[1].subset[10:12, 40:42]
-            array([[-0.02022914,  0.01017784],
-                   [-0.00605198,  0.01016048]], dtype=float32)
-
-        To configure the size of the blocks that are downloaded and cached by fsspec, you can
-        use the ``fsspec_kwargs`` parameter to pass on the relevant options:
-
-            >>> f = fits.open(uri, fsspec_kwargs={'default_cache_type': "block", 'default_block_size': 5_000_000})
-        """
-        dtype = np.dtype(BITPIX2DTYPE[self._orig_bitpix]).newbyteorder('>')
-        return LazyImageData(file=self._file, shape=self.shape, dtype=dtype, offset=self._data_offset)
-
     @lazyproperty
     def data(self):
         """
@@ -995,10 +932,10 @@ class _ImageBaseHDU(_ValidHDU):
 
 class Section:
     """
-    Image section.
+    Class enabling subsets of ImageHDU data to be loaded lazily via slicing.
 
     Slices of this object load the corresponding section of an image array from
-    the underlying FITS file on disk, and applies any BSCALE/BZERO factors.
+    the underlying FITS file, and applies any BSCALE/BZERO factors.
 
     Section slices cannot be assigned to, and modifications to a section are
     not saved back to the underlying file.
@@ -1012,9 +949,18 @@ class Section:
 
     @property
     def shape(self):
-        return self.hdu.shape  # enables Cutout2D to accept `Section`
+        # Implementing `.shape` enables `astropy.nddata.Cutout2D` to accept
+        # `ImageHDU.section` in place of `.data`.
+        return self.hdu.shape
 
     def __getitem__(self, key):
+        """Returns a slice of HDU data specified by `key`.
+
+        If the image HDU is backed by a file handle, this method will only read
+        the chunks of the file needed to extract `key`, which is useful in
+        situations where the file is located on a slow or remote file system
+        (e.g., cloud storage).
+        """
         if not isinstance(key, tuple):
             key = (key,)
         naxis = len(self.hdu.shape)
@@ -1059,6 +1005,8 @@ class Section:
             dims = tuple(dims) or (1,)
             bitpix = self.hdu._orig_bitpix
             offset = self.hdu._data_offset + offset * abs(bitpix) // 8
+            # Note: the actual file read operations are delegated to
+            # `util._array_from_file` via `ImageHDU._get_scaled_image_data`
             data = self.hdu._get_scaled_image_data(offset, dims)
         else:
             data = self._getdata(key)
@@ -1292,99 +1240,3 @@ class _IndexInfo:
             self.contiguous = False
         else:
             raise IndexError(f'Illegal index {indx}')
-
-
-class LazyImageData():
-    """Helper class to enable subsets of ImageHDU data to be loaded lazily via slicing.
-
-    See `_ImageBaseHDU.subset` for details on its use.
-    """
-
-    def __init__(self, file, shape, dtype, offset):
-        """Construct a LazyImageData object.
-
-        Parameters
-        ----------
-        file : file-like object
-            File object containing the data.
-            Typically a FITS image opened using ``fsspec``.
-
-        shape : tuple
-            Shape of the image.
-
-        dtype : dtype
-            Data type of the image.
-
-        offset : int
-            Position in the file where the image data starts.
-        """
-        self.file = file
-        self.shape = shape
-        self.dtype = np.dtype(dtype)
-        self.offset = offset
-
-    def __getitem__(self, key):
-        """Returns a subset of the array specified by `key`.
-
-        This function will use the open file handle to read only the chunks of the image
-        needed to extract `key`.
-        """
-        # First we check `key` and ensure it is a tuple of length self.shape
-        if isinstance(key, tuple):
-            # If the tuple starts with ellipsis, expand the length of the tuple to match the number of dimensions
-            if key[0] is ...:
-                keytuple = tuple([slice(None) for _ in range(len(self.shape)-len(key)+1)] + list(key[1:]))
-            else:
-                keytuple = key
-        elif isinstance(key, slice):
-            # Convert a single slice to a tuple
-            keytuple = tuple([key] + [slice(None) for _ in range(len(self.shape)-1)])
-        elif isinstance(key, int):
-            # Caution: subsetting is not possible; we'd have to download the entire image.
-            if key < 0:  # support negative indices
-                key = self.shape[0] + key
-            keytuple = tuple([slice(key, key+1)] + [slice(None) for _ in range(len(self.shape)-1)])
-        elif key is None or key is ...:
-            keytuple = tuple(slice(None) for _ in range(len(self.shape)))
-        else:
-            raise TypeError('Index must be a int, slice, or tuple, not {}'.format(type(key).__name__))
-
-        # Next we determine which chunks need to be obtained
-        which_chunks = keytuple[0]
-        if isinstance(which_chunks, int):
-            if which_chunks < 0:  # support negative indices
-                which_chunks = self.shape[0] + which_chunks
-            which_chunks = slice(which_chunks, which_chunks+1)
-        elif which_chunks is ...:  # ellipses
-            which_chunks = slice(None)
-
-        # Number of bytes in each chunk
-        chunksize = self.dtype.itemsize * math.prod(self.shape[1:])
-        # We will require chunks identified by #start, #stop, and #step
-        start, stop, step = which_chunks.indices(self.shape[0])
-
-        # If step=1, we can request all chunks in one read request
-        if step == 1:
-            n_chunks = stop - start
-            self.file.seek(self.offset + start*chunksize)
-            databuffer = self.file.read(n_chunks*chunksize)
-        else:  # Alternatively, emit one read request for each chunk
-            chunkdata = []
-            for idx in range(start, stop, step):
-                self.file.seek(self.offset + idx*chunksize)
-                chunkdata.append(self.file.read(chunksize))
-            databuffer = b''.join(chunkdata)
-            n_chunks = len(chunkdata)
-
-        newshape = tuple([n_chunks] + list(self.shape[1:]))
-        data = np.ndarray(newshape, dtype=self.dtype, buffer=databuffer)
-
-        # If the original key was an int, we need to ensure we return an array
-        # of shape (N,) rather than (1, N) for numpy compatibility.
-        if isinstance(key, int) or isinstance(keytuple[0], int):
-            customtuple = tuple([0] + [idx for idx in keytuple[1:]])
-            return data[customtuple]
-        elif key is None:  # Indexing with None adds a dimension, so we replicate that behavior here.
-            return data[key]
-        customtuple = tuple([slice(None)] + [idx for idx in keytuple[1:]])
-        return data[customtuple]

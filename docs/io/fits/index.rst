@@ -136,23 +136,21 @@ because by that point you are likely to run out of physical memory anyways), but
 
 .. _fits-cloud-files:
 
-Working with cloud-hosted files
-"""""""""""""""""""""""""""""""
+Working with remote or cloud-hosted files
+"""""""""""""""""""""""""""""""""""""""""
 
-The :func:`open` function supports a ``use_fsspec`` argument which allows file paths to be opened using the `fsspec <https://filesystem-spec.readthedocs.io>`__ package.  This package supports a range of remote and distributed storage backends, such as Amazon and Google Cloud Storage. The ``use_fsspec`` parameter automatically defaults to ``True`` if a file path is passed which starts with prefix ``s3://`` for Amazon S3 or ``gs://`` for Google Cloud. For example, we can open a Hubble Space Telescope image hosted in the data archive's Amazon S3 bucket as follows:
+The :func:`open` function supports a ``use_fsspec`` argument which allows file paths to be opened using `fsspec <https://filesystem-spec.readthedocs.io>`__.  The `fsspec` package supports a range of remote and distributed storage backends such as Amazon and Google Cloud Storage. For example, we can open a Hubble Space Telescope image hosted in the Hubble data archive's public Amazon S3 bucket as follows:
 
 .. doctest-remote-data::
 
     >>> uri = "s3://stpubdata/hst/public/j8pu/j8pu0y010/j8pu0y010_drc.fits"
-    >>> with fits.open(uri) as hdul:
+    >>> with fits.open(uri, use_fsspec=True) as hdul:
     ...    data = hdul[1].section[10:12, 20:22]
 
-Note that we accessed the data using the `.section` attribute rather than the `.data` attribute.  By using `.section`, we ensure that only the necessary subset of the FITS image is downloaded.  The use of `.section` enables small cutouts to obtained from remote FITS files in a way that is *significantly* faster than downloading the entire file.
+Note that the example above accesses the image data using the `.section` attribute rather than the traditional `.data` attribute.  Using `.section` ensures that only the necessary parts of the FITS image are downloaded.  The use of `.section` prevents AstroPy from downloading the entire underlying image, which *significantly* speeds up use cases which only require small cutouts from large remote FITS files.
+See :ref:`fits_io_cloud` for additional information on working with remote or cloud-hosted FITS files.
 
-.. topic:: Examples:
-
-    See also :ref:`sphx_glr_generated_examples_io_cloud-hosted-fits-files.py`.
-
+.. seealso:: :ref:`fits_io_cloud`.
 
 
 Unsigned integers

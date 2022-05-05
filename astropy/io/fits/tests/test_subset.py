@@ -57,7 +57,7 @@ INDEXING_PATTERNS_3D = [
 
 
 def test_subset_from_image():
-    """Verifies the correctness of indexing an image via `.subset`."""
+    """Verifies the correctness of indexing an image via `.section`."""
     # test0.fits[1] is a 2D image with shape (40, 40)
     fn = get_pkg_data_filename('data/test0.fits')
     with fits.open(fn) as f:
@@ -66,7 +66,7 @@ def test_subset_from_image():
 
 
 def test_subset_from_cube():
-    """Verifies the correctness of indexing an cube via `.subset`."""
+    """Verifies the correctness of indexing an cube via `.section`."""
     # arange.fits[0] is a 3D array with shape (7, 10, 11)
     fn = get_pkg_data_filename('data/arange.fits')
     with fits.open(fn) as f:
