@@ -157,7 +157,7 @@ attribute rather than the traditional `ImageHDU.data` attribute.
 The use of `.section` ensures that only the necessary parts of the FITS
 image are transferred from the server, rather than downloading the entire data array.
 This trick can significantly speed up your code if you require small cutouts from
-large FITS files located on slow (remote) storage systems. 
+large FITS files located on slow (remote) storage systems.
 See :ref:`fits_io_cloud` for additional information on working with remote or cloud-hosted FITS files in this way.
 
 .. seealso:: :ref:`fits_io_cloud`.
