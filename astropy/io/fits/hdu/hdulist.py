@@ -190,7 +190,7 @@ def fitsopen(name, mode='readonly', memmap=None, save_backup=False,
         if isinstance(name, str) and name.startswith(("s3://", "gs://")):
             use_fsspec = True
         else:
-            use_fsspec = False
+            use_fsspec = conf.use_fsspec
     else:
         use_fsspec = bool(use_fsspec)
 
