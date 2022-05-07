@@ -48,12 +48,6 @@ The example above requires less time than would be required to download the enti
 * The ``lazy_load_hdus=True`` parameter takes care of loading HDU header and data attributes on demand rather than reading all HDUs at once.
 * The `ImageHDU.section` property enables a subset of an image array to be read into memory without downloading the entire image. Its use is not necessary for local files, which can be accessed efficiently using memory mapping, but it is beneficial for remote files. See the :ref:`astropy:data-sections` part of the documentation for more details.
 
-.. 
-  This example obtained a small 10-by-20 pixel cutout of the image data.  You should find that this example runs very fast -- much faster than downloading the entire image to disk.  This is because we used the `ImageHDU.section` property to access the image values.
-
-  `.section` is a special property which enables a subset of an image array to be read into memory without downloading the entire file.  We could have obtained the same values using the `.data` attribute (i.e., ``hdul[1].data[10:20, 30:50]``), but it would have triggered AstroPy to download the entire image, which generally requires  more time and memory.
-  See the :ref:`astropy:data-sections` part of the documentation for more details.
-
 .. note::
 
     The ``lazy_load_hdus`` parameter is set to ``True`` by default.
@@ -79,7 +73,7 @@ With ``use_fsspec`` enabled, you can access a file stored in Amazon S3 cloud sto
 
 The example above may be particularly fast if your code is running on a server inside the Amazon cloud.
 
-In some cases you may want to access data stored in the Amazon S3 cloud from a data bucket that is private or uses the "Requester Pays" feature. You will have to provide a secret access key in this case. You can use the ``fsspec_kwargs`` parameter to pass extra parameters such as access keys to the ``fsspec.open`` function as follows:
+In some cases you may want to access data stored in an Amazon S3 data bucket that is private or uses the "Requester Pays" feature. You will have to provide a secret access key in this case. You can use the ``fsspec_kwargs`` parameter to pass extra parameters such as access keys to the ``fsspec.open`` function as follows:
 
 .. doctest-skip::
 
@@ -94,7 +88,7 @@ It is also possible to pass the secret access key via a configuration file or vi
 
     It is possible to access data from public S3 buckets without providing credentials.
     In this case it is necessary to pass the ``fsspec_kwargs={"anon": True}`` parameter
-    to `open`.  Astropy will pass this parameter by default if a path starts with ``s3://`` and ``fsspec_kwargs`` is unspecified.
+    to `open`.  For convenience, Astropy will pass this parameter by default if a path starts with ``s3://`` and ``fsspec_kwargs`` is unspecified.
 
 
 Using :class:`~astropy.nddata.Cutout2D` on cloud-hosted FITS files
@@ -137,4 +131,4 @@ As a final step, you can plot the cutout using Matplotlib as follows::
     plt.imshow(cutout.data, cmap='gray')
     plt.colorbar()
 
-See :ref:`cutout_images` for more details on the use of ``Cutout2D``.
+See :ref:`cutout_images` for more details.
