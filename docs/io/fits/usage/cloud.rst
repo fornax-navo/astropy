@@ -5,8 +5,8 @@
 Obtaining subsets from cloud-hosted FITS files
 **********************************************
 
-Astropy offers built-in support to extract data from FITS files stored in the cloud. Specifically, the `astropy.io.fits.open` function accepts a ``use_fsspec`` parameter which allows files to be accessed in an efficient way using the `fsspec <https://filesystem-spec.readthedocs.io>`__ package.
-``fsspec`` is an optional dependency of Astropy which supports opening files from a range of remote and distributed storage backends, such as web servers and Amazon or Google Cloud Storage.  This chapter provides details on its use.
+Astropy offers support for extracting data from FITS files stored in the cloud. Specifically, the `astropy.io.fits.open` function accepts a ``use_fsspec`` parameter which allows remote files to be accessed in an efficient way using the `fsspec <https://filesystem-spec.readthedocs.io>`__ package.
+``fsspec`` is an optional dependency of Astropy which supports reading files from a range of remote and distributed storage backends, such as Amazon and Google Cloud Storage.  This chapter explains its use.
 
 .. note::
 
@@ -18,62 +18,74 @@ Subsetting FITS files hosted on an HTTP web server
 ==================================================
 
 A common use case for ``fsspec`` is to read subsets of FITS data from a web server via the HTTP protocol.
-For example, let's assume you may to retrieve a small cutout from a large image obtained by the Hubble Space Telescope available at the following download link::
+For example, let's assume you want to retrieve data from a large image obtained by the Hubble Space Telescope available at the following url::
 
     # Download link for a large Hubble archive image (213 MB)
     url = "https://mast.stsci.edu/api/v0.1/Download/file/?uri=mast:HST/product/j8pu0y010_drc.fits"
 
 This file can be opened by passing the url to `astropy.io.fits.open`.  By default, Astropy will download the entire file to your local disc before opening it.  This works fine for small files but tends to require a lot of time and memory for large files.
 
-You can improve the performance for large files by passing the parameters ``use_fsspec=True`` and ``lazy_load_hdus=True`` to `open`, which will cause only the necessary parts of the FITS file to be downloaded.  For example:
+You can improve the performance for large files by passing the parameters ``use_fsspec=True`` and ``lazy_load_hdus=True`` to `open`.  This will make Astropy download only the necessary parts of the FITS file.  For example:
 
 .. doctest-remote-data::
 
     from astropy.io import fits
 
-    # `fits.open` will download the primary header (hdul[0].header)
+    # `open` will only download the primary header
     with fits.open(url, use_fsspec=True, lazy_load_hdus=True) as hdul:
 
         # Download a single header
         header = hdul[1].header
 
-        # Download a single image array
+        # Download a single data array
         image = hdul[1].data
 
-        # Download a small 10-by-20 pixel cutout using `.section`
+        # Download a small 10-by-20 pixel cutout
         cutout = hdul[2].section[10:20, 30:50]
 
-The example above requires less time than would be required to download the entire file to disc. This is because we are leveraging two "lazy data loading" features available in the Astropy FITS reader:
+The example above requires less time than would be required to download the entire file to disc. This is because we are leveraging two *lazy data loading* features available in the Astropy FITS reader:
 
-* The ``lazy_load_hdus=True`` parameter takes care of loading HDU header and data attributes on demand rather than reading all HDUs at once.
-* The `ImageHDU.section` property enables a subset of an image array to be read into memory without downloading the entire image. Its use is not necessary for local files, which can be accessed efficiently using memory mapping, but it is beneficial for remote files. See the :ref:`astropy:data-sections` part of the documentation for more details.
+1. The ``lazy_load_hdus`` parameter takes care of loading HDU header and data attributes on demand rather than reading all HDUs at once.  It is set to ``True`` by default. You do not need to pass this parameter explicitely, unless you changed its default value in the :ref:`astropy:astropy_config`.
+2. The `ImageHDU.section` property enables a subset of an image array to be read into memory without downloading the entire image. See the :ref:`astropy:data-sections` part of the documentation for more details.
 
 .. note::
 
-    The ``lazy_load_hdus`` parameter is set to ``True`` by default.
-    You do not need to pass this parameter explicitely, unless you changed its default value in the :ref:`astropy:astropy_config` (which would be unusual).
+   The exact amount of data that will be downloaded by your code depends on the configuration of `fsspec`, which supports different data reading and caching strategies which aim to minimize the number of network requests. You can alter this configuration by passing the ``cache_type`` and ``block_size`` parameters to `fsspec` via the `fsspec_kwargs` parameter.  See the `fsspec` documentation for details.  For example:
+
+
+..
+
+    .. doctest-remote-data::
+    with fits.open(url, use_fsspec=True, fsspec_kwargs=fsspec_kwargs) as hdul:
+        cutout = hdul[1].section[10:20, 30:50]
+
 
 
 Subsetting FITS files hosted in Amazon S3 cloud storage
 ======================================================
 
-The file used in the example above also happens to be available via Amazon cloud storage, where it is stored in a `public S3 bucket <https://registry.opendata.aws/hst/>`__ at the following location::
+The FITS file used in the example above also happens to be available via Amazon cloud storage, where it is stored in a `public S3 bucket <https://registry.opendata.aws/hst/>`__ at the following location::
 
     s3_uri = "s3://stpubdata/hst/public/j8pu/j8pu0y010/j8pu0y010_drc.fits"
 
-With ``use_fsspec`` enabled, you can access a file stored in Amazon S3 cloud storage in the same way as a file stored on a traditional web server.  For example:
+With ``use_fsspec`` enabled, you can obtain a small cutout from a file stored in Amazon S3 cloud storage in the same way as before.  For example:
 
 .. doctest-remote-data::
     with fits.open(s3_uri, use_fsspec=True) as hdul:
+        # Obtain a small 10-by-20 pixel cutout
         cutout = hdul[1].section[10:20, 30:50]
+
+Obtaining the cutout from Amazon S3 storage may be particularly efficient if your code is running on a server in the same Amazon cloud region as the data.
 
 .. note::
 
-    To open ``s3://`` paths, ``fsspec`` requires an additional optional dependency called ``s3fs``.  A ``ModuleNotFoundError`` will be raised if the dependency is missing. See :ref:`installing-astropy` for details on installing optional dependencies.
+    ``fsspec`` requires an additional dependency called ``s3fs`` to open ``s3://`` paths, .  A ``ModuleNotFoundError`` will be raised if this dependency is missing. See :ref:`installing-astropy` for details on installing optional dependencies.
 
-The example above may be particularly fast if your code is running on a server inside the Amazon cloud.
 
-In some cases you may want to access data stored in an Amazon S3 data bucket that is private or uses the "Requester Pays" feature. You will have to provide a secret access key in this case. You can use the ``fsspec_kwargs`` parameter to pass extra parameters such as access keys to the ``fsspec.open`` function as follows:
+Accessing data from S3 using custom access keys
+-----------------------------------------------
+
+In some cases you may want to access data stored in an Amazon S3 data bucket that is private or uses the "Requester Pays" feature. You will have to provide a secret access key in this case. You can use the ``fsspec_kwargs`` parameter to pass such extra parameters to the ``fsspec.open`` function as follows:
 
 .. doctest-skip::
 
@@ -82,22 +94,25 @@ In some cases you may want to access data stored in an Amazon S3 data bucket tha
     with fits.open(s3_uri, use_fsspec=True, fsspec_kwargs=fsspec_kwargs) as hdul:
         cutout = hdul[2].section[10:20, 30:50]
 
-It is also possible to pass the secret access key via a configuration file or via environment variables. See the ``s3fs`` documentation for details.
+
+.. warning::
+
+    Including secret access keys inside Python code is not a good practice because you may accidentally end up revealing your keys when sharing your code with others. A better practice is to store your access keys via a configuration file or environment variables. See the ``s3fs`` documentation for details.
+
 
 .. note::
 
-    It is possible to access data from public S3 buckets without providing credentials.
+    It is possible to access data from public S3 buckets without providing an access key.
     In this case it is necessary to pass the ``fsspec_kwargs={"anon": True}`` parameter
     to `open`.  For convenience, Astropy will pass this parameter by default if a path starts with ``s3://`` and ``fsspec_kwargs`` is unspecified.
 
 
-Using :class:`~astropy.nddata.Cutout2D` on cloud-hosted FITS files
-==================================================================
+Using :class:`~astropy.nddata.Cutout2D` with cloud-hosted FITS files
+====================================================================
 
-In the examples above we noted that the `.section` attribute provides an efficient way to obtain a small cutout from a large remote image.  The use of this property requires knowing the exact array (pixel) coordinates for the desired cutout.  It is often useful to obtain cutouts based on the celestial position and size of an object instead.
-We can use the `astropy.nddata.Cutout2D` tool to obtain a cutout from the cloud in this way.
+In the examples above we used the `.section` attribute to download small cutouts given a set of array (pixel) coordinates. For astronomical images it is often more convenient to obtain cutouts based on a sky position and angular size rather than array coordinates. For this reason, Astropy provides the `astropy.nddata.Cutout2D` tool which makes it easy to obtain cutouts informated by the image's World Coordinate System (WCS).
 
-Assume you happen to know that the image used in the examples above contains an edge-on galaxy at the following position::
+For example, assume you happen to know that the image used in the examples above contains a nice edge-on galaxy at the following position::
 
     from astropy.coordinates import SkyCoord
     from astropy import units as u
