@@ -248,7 +248,7 @@ You can tune the performance of fsspec's buffering strategy by passing custom
 ``block_size`` and ``cache_type`` parameters to `fsspec.open`.  You can pass
 these parameters via the ``fsspec_kwargs`` argument of `astropy.io.fits.open`.
 For example, we can configure fsspec to make buffered reads with a minimum
-`block_size` of 1 MB as follows:
+``block_size`` of 1 MB as follows:
 
 .. doctest-remote-data::
 
