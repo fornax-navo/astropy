@@ -1,11 +1,5 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """Can `astropy.io.fits.open` access (remote) data using the fsspec package?
-
-TODO
-====
-* Add test verifying i/o behavior?
-* Improve narrative docs.
-* Edit the "Data Sections" section of the docs.
 """
 from astropy.io import fits
 from astropy.nddata import Cutout2D
