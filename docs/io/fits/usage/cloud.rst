@@ -182,7 +182,7 @@ in combination with ``use_fsspec=True`` and ``.section`` as follows:
     ...                       size=size,
     ...                       wcs=wcs)
 
-As a final step, you can plot the cutout using Matplotlib as follows::
+As a final step, you can plot the cutout using Matplotlib as follows:
 
 .. doctest-remote-data::
     >>> import matplotlib.pyplot as plt
