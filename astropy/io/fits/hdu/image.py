@@ -1224,7 +1224,7 @@ class ImageHDU(_ImageBaseHDU, ExtensionHDU):
 class _IndexInfo:
     def __init__(self, indx, naxis):
         if _is_int(indx):
-            if indx < 0:
+            if indx < 0:  # support negative indexing
                 indx = indx + naxis
             if 0 <= indx < naxis:
                 self.npts = 1
