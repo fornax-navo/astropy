@@ -238,22 +238,26 @@ Configuring the ``fsspec`` block size and download strategy
 -----------------------------------------------------------
 
 The ``fsspec`` package supports different data reading and caching strategies
-which aim to minimize the number of network requests.  In general, fsspec
-will attempt to download data in large contiguous blocks, similar to the
-*read ahead* strategy that is employed by operating systems when they load
-local files.
+which aim to find a balance between the number of network requests on one hand
+and the total amount of data transferred on the other hand.  By default, fsspec
+will attempt to download data in large contiguous blocks using a buffered
+*read ahead* strategy, similar to the strategy that is employed when operating
+systems load local files into memory.
 
-You can tune the performance of fsspec's download strategy by passing custom
+You can tune the performance of fsspec's buffering strategy by passing custom
 ``block_size`` and ``cache_type`` parameters to `fsspec.open`.  You can pass
 these parameters via the ``fsspec_kwargs`` argument of `astropy.io.fits.open`.
-For example:
+For example, we can configure fsspec to make buffered reads with a minimum
+`block_size` of 1 MB as follows:
 
 .. doctest-remote-data::
 
-    >>> # Access remote data using HTTP requests at least 1 MB or more in size
     >>> fsspec_kwargs = {"block_size": 1_000_000, "cache_type": "bytes"}
     >>> with fits.open(url, use_fsspec=True, fsspec_kwargs=fsspec_kwargs) as hdul:
     ...     cutout = hdul[1].section[10:20, 30:50]
+
+The ideal configuration will depend on the latency and throughput of the
+network, as well as the exact shape and volume of the data you seek to obtain.
 
 See the `fsspec documentation <https://filesystem-spec.readthedocs.io>`__
 for more information on its options.
