@@ -88,6 +88,7 @@ def test_fsspec_s3():
         assert "partially read" in str(hdul)
 
 
+@pytest.mark.skipif("not HAS_FSSPEC")
 def test_fsspec_cutout2d():
     """Does Cutout2D work with data loaded lazily using fsspec and .section?"""
     fn = get_pkg_data_filename('data/test0.fits')
@@ -99,6 +100,7 @@ def test_fsspec_cutout2d():
         assert_allclose(cutout1.data, cutout2.data)
 
 
+@pytest.mark.skipif("not HAS_FSSPEC")
 def test_fsspec_compressed():
     """Does fsspec support compressed data correctly?"""
     # comp.fits[1] is a compressed image with shape (440, 300)
