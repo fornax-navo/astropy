@@ -149,7 +149,7 @@ Amazon S3 bucket as follows:
 .. doctest-remote-data::
     >>> # Location of a large Hubble archive image in Amazon S3 (213 MB)
     >>> uri = "s3://stpubdata/hst/public/j8pu/j8pu0y010/j8pu0y010_drc.fits"
-
+    ...
     >>> # Extract a 10-by-20 pixel cutout image
     >>> with fits.open(uri, use_fsspec=True, fsspec_kwargs={"anon": True}) as hdul:
     ...    cutout = hdul[1].section[10:20, 30:50]

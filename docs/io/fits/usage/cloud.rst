@@ -49,7 +49,7 @@ For example:
 .. doctest-remote-data::
 
     >>> from astropy.io import fits
-
+    ...
     >>> # `fits.open` will download the primary header
     >>> with fits.open(url, use_fsspec=True, lazy_load_hdus=True) as hdul:
     ...
@@ -174,7 +174,7 @@ in combination with ``use_fsspec=True`` and ``.section`` as follows:
 .. doctest-remote-data::
     >>> from astropy.nddata import Cutout2D
     >>> from astropy.wcs import WCS
-
+    ...
     >>> with fits.open(s3_uri, use_fsspec=True) as hdul:
     ...     wcs = WCS(hdul[1].header)
     ...     cutout = Cutout2D(hdul[1].section,  # use `.section` rather than `.data`!
@@ -184,9 +184,10 @@ in combination with ``use_fsspec=True`` and ``.section`` as follows:
 
 As a final step, you can plot the cutout using Matplotlib as follows::
 
+.. doctest-remote-data::
     >>> import matplotlib.pyplot as plt
     >>> from astropy.visualization import astropy_mpl_style
-
+    ...
     >>> plt.style.use(astropy_mpl_style)
     >>> plt.figure()
     >>> plt.imshow(cutout.data, cmap='gray')
