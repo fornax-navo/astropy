@@ -151,7 +151,7 @@ Amazon S3 bucket as follows:
     uri = "s3://stpubdata/hst/public/j8pu/j8pu0y010/j8pu0y010_drc.fits"
 
     # Extract a 10-by-20 pixel cutout image
-    with fits.open(uri, use_fsspec=True) as hdul:
+    with fits.open(uri, use_fsspec=True, fsspec_kwargs={"anon": True}) as hdul:
         cutout = hdul[1].section[10:20, 30:50]
 
 Note that the example above obtains a cutout image using the `ImageHDU.section`
