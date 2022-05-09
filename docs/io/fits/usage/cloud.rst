@@ -81,7 +81,7 @@ this page.
 .. note::
 
     The `ImageHDU.section` feature is only available for uncompressed FITS
-    image extensions.  Attempting to use ``~ImageHDU.section`` on a compressed
+    image extensions.  Attempting to use ``.section`` on a compressed
     image will yield an `AttributeError`.
 
 
@@ -154,7 +154,7 @@ size rather than array coordinates. For this reason, Astropy provides the
 `astropy.nddata.Cutout2D` tool which makes it easy to obtain cutouts informed
 by an image's World Coordinate System (`~astropy.wcs.WCS`).
 
-This cutout tool can be used in combination with ``fsspec`` and `~ImageHDU.section`.
+This cutout tool can be used in combination with ``fsspec`` and ``.section``.
 For example, assume you happen to know that the image we opened above contains
 a nice edge-on galaxy at the following position::
 

@@ -156,7 +156,7 @@ Amazon S3 bucket as follows:
 
 Note that the example above obtains a cutout image using the `ImageHDU.section`
 attribute rather than the traditional `ImageHDU.data` attribute.
-The use of `~ImageHDU.section` ensures that only the necessary parts of the FITS
+The use of ``.section`` ensures that only the necessary parts of the FITS
 image are transferred from the server, rather than downloading the entire data
 array. This trick can significantly speed up your code if you require small
 subsets of large FITS files located on slow (remote) storage systems.
