@@ -81,7 +81,7 @@ this page.
 .. note::
 
     The `ImageHDU.section` feature is only available for uncompressed FITS
-    image extensions.  Attempting to use ``.section`` on a compressed
+    image extensions.  This includes file-level compression like `gzip` as well as compression internal to the FITS format, like tile compression. Attempting to use ``.section`` on a compressed
     image will yield an `AttributeError`.
 
 
